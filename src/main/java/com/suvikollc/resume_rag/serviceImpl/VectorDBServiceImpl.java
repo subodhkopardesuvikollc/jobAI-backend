@@ -1,7 +1,6 @@
-package com.suvikollc.resume_rag.service;
+package com.suvikollc.resume_rag.serviceImpl;
 
 import java.io.InputStream;
-import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,14 +24,13 @@ import com.azure.storage.file.share.ShareDirectoryClient;
 import com.azure.storage.file.share.ShareFileClient;
 import com.azure.storage.file.share.ShareServiceClient;
 import com.azure.storage.file.share.models.ShareFileItem;
-import com.azure.storage.file.share.sas.ShareFileSasPermission;
-import com.azure.storage.file.share.sas.ShareServiceSasSignatureValues;
 import com.suvikollc.resume_rag.dto.SearchResultsDto;
+import com.suvikollc.resume_rag.service.FileService;
 
 @Service
-public class IngestionSerivce {
+public class VectorDBServiceImpl {
 
-	private static final Logger log = LoggerFactory.getLogger(IngestionSerivce.class);
+	private static final Logger log = LoggerFactory.getLogger(VectorDBServiceImpl.class);
 
 	@Autowired
 	private VectorStore vectorStore;
@@ -46,17 +44,19 @@ public class IngestionSerivce {
 	@Autowired
 	private KafkaProducer kafkaProducer;
 
-	public void processDocument(String fileName) {
+	@Autowired
+	private FileService fileService;
+
+	public void uploadToVectorDB(String fileName) {
 		log.info("Processing document from file share: {}", fileName);
 		try {
-			// --- LOGIC CHANGED TO USE FILE SHARE CLIENTS ---
 			ShareClient shareClient = shareServiceClient.getShareClient(shareName);
 			ShareDirectoryClient rootDirClient = shareClient.getRootDirectoryClient();
 			ShareFileClient fileClient = rootDirClient.getFileClient(fileName);
 
 			if (!fileClient.exists()) {
 				log.error("File not found during processing: {}", fileName);
-				return;
+				throw new RuntimeException("File not found: " + fileName);
 			}
 
 			InputStream fileInputStream = fileClient.openInputStream();
@@ -68,7 +68,6 @@ public class IngestionSerivce {
 			List<Document> chunkedDocuments = textSplitter.apply(documents);
 			log.info("Split document {} into {} chunks.", fileName, chunkedDocuments.size());
 
-			// Create predictable IDs for upserting (this logic remains the same)
 			for (int i = 0; i < chunkedDocuments.size(); i++) {
 				Document chunk = chunkedDocuments.get(i);
 				String uniqueId = fileName + "-chunk-" + i;
@@ -84,7 +83,7 @@ public class IngestionSerivce {
 		}
 	}
 
-	public Map<String, Double> queryDocument(String query) {
+	private Map<String, Double> queryDocument(String query) {
 
 		try {
 			var searchConfig = SearchRequest.builder().query(query).topK(10).similarityThreshold(0.5).build();
@@ -106,7 +105,7 @@ public class IngestionSerivce {
 		return null;
 	}
 
-	public void initiatingDocumentLoad() {
+	public void initiateDocumentLoad() {
 
 		log.info("Initiating document upload...");
 
@@ -131,31 +130,6 @@ public class IngestionSerivce {
 		}
 	}
 
-	public String getSharableUrl(String fileName) {
-
-		log.info("Generating sharable URL for file: {}", fileName);
-		try {
-			var shareClient = shareServiceClient.getShareClient(shareName);
-			var fileClient = shareClient.getRootDirectoryClient().getFileClient(fileName);
-			if (!fileClient.exists()) {
-				log.error("File not found for generating sharable URL: {}", fileName);
-				return null;
-			}
-			OffsetDateTime expiryTime = OffsetDateTime.now().plusDays(1);
-
-			ShareFileSasPermission permissions = new ShareFileSasPermission().setReadPermission(true);
-			ShareServiceSasSignatureValues signatureValues = new ShareServiceSasSignatureValues(expiryTime,
-					permissions).setContentDisposition("inline");
-			String sasToken = fileClient.generateSas(signatureValues);
-
-			return String.format("%s?%s", fileClient.getFileUrl(), sasToken);
-		} catch (Exception e) {
-			log.error("Failed to generate sharable URL: " + e.getMessage());
-			e.printStackTrace();
-			throw new RuntimeException("Error generating sharable URL", e);
-		}
-	}
-
 	public List<SearchResultsDto> getResults(String query) {
 
 		Map<String, Double> results = queryDocument(query);
@@ -169,7 +143,7 @@ public class IngestionSerivce {
 			return results.entrySet().stream().map(entry -> {
 				String fileName = entry.getKey();
 				Double score = entry.getValue();
-				String fileUrl = getSharableUrl(fileName);
+				String fileUrl = fileService.getSharableUrl(fileName);
 				return new SearchResultsDto(fileName, fileUrl, score);
 			}).collect(Collectors.toList());
 		} catch (Exception e) {

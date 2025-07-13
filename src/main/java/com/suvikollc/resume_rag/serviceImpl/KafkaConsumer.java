@@ -1,4 +1,4 @@
-package com.suvikollc.resume_rag.service;
+package com.suvikollc.resume_rag.serviceImpl;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +12,7 @@ public class KafkaConsumer {
 	Logger log = LoggerFactory.getLogger(this.getClass());
 
 	@Autowired
-	IngestionSerivce ingestionSerivce;
+	VectorDBServiceImpl ingestionSerivce;
 
 	@KafkaListener(topics = "resume-upload-events", groupId = "resume-group")
 	public void listenForNewFile(String fileName) {
@@ -21,7 +21,7 @@ public class KafkaConsumer {
 
 		try {
 
-			ingestionSerivce.processDocument(fileName);
+			ingestionSerivce.uploadToVectorDB(fileName);
 
 			log.info("Successfully processed event for fileName: " + fileName);
 
