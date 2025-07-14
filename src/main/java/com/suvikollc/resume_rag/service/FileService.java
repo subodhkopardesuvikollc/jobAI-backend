@@ -6,7 +6,7 @@ import com.suvikollc.resume_rag.entities.File;
 
 public interface FileService {
 
-	public File uploadFile(MultipartFile file);
+	public <T extends File> T uploadFile(MultipartFile file, Class<T> fileType);
 
 	public String getSharableUrl(String fileName);
 
