@@ -18,7 +18,11 @@ import com.azure.storage.file.share.ShareServiceClient;
 import com.azure.storage.file.share.sas.ShareFileSasPermission;
 import com.azure.storage.file.share.sas.ShareServiceSasSignatureValues;
 import com.suvikollc.resume_rag.entities.File;
+import com.suvikollc.resume_rag.entities.Jd;
+import com.suvikollc.resume_rag.entities.Resume;
 import com.suvikollc.resume_rag.repository.FileRepository;
+import com.suvikollc.resume_rag.repository.JdRepository;
+import com.suvikollc.resume_rag.repository.ResumeRepository;
 import com.suvikollc.resume_rag.service.FileService;
 
 @Service
@@ -27,24 +31,29 @@ public class FileServiceImpl implements FileService {
 	Logger log = LoggerFactory.getLogger(this.getClass());
 
 	@Autowired
-	private FileRepository fileRepository;
-	
+	private ResumeRepository resumeRepository;
+
+	@Autowired
+	private JdRepository jdRepository;
+
 	@Value("${azure.storage.share.name}")
 	private String shareName;
 
-	@Value("${azure.storage.container.name}")
-	private String containerName;
+	@Value("${azure.storage.resume.container.name}")
+	private String resumeContainerName;
 
+	@Value("${azure.storage.jd.container.name}")
+	private String jdContainerName;
 
 	@Autowired
 	private ShareServiceClient shareServiceClient;
-	
+
 	@Autowired
 	private BlobServiceClient blobServiceClient;
 
 	@Transactional
-	public File uploadFile(MultipartFile file) {
-
+	public <T extends File> T uploadFile(MultipartFile file, Class<T> fileType) {
+		String containerName = getContainerName(fileType);
 		BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
 
 		String blobName = file.getOriginalFilename();
@@ -53,7 +62,8 @@ public class FileServiceImpl implements FileService {
 
 		try (InputStream inputStream = file.getInputStream()) {
 
-			File savedFile = saveFile(new File(null, file.getOriginalFilename(), blobName, null, null));
+			var savedFile = createFileInstance(fileType, containerName, blobName);
+			savedFile = saveFile(savedFile);
 
 			blobClient.upload(inputStream, file.getSize(), true);
 
@@ -72,10 +82,41 @@ public class FileServiceImpl implements FileService {
 
 	}
 
-	private File saveFile(File file) {
+	private String getContainerName(Class<?> fileType) {
+
+		if (fileType.equals(Resume.class)) {
+			return resumeContainerName;
+		} else if (fileType.equals(Jd.class)) {
+			return jdContainerName;
+		}
+		throw new IllegalArgumentException("Unsupported file type: " + fileType.getSimpleName());
+
+	}
+
+	@SuppressWarnings("unchecked")
+	private <T extends File> T createFileInstance(Class<T> fileType, String fileName, String blobName) {
+
+		if (fileType.equals(Resume.class)) {
+			return (T) new Resume(null, fileName, blobName, null, null, null);
+		} else if (fileType.equals(Jd.class)) {
+			return (T) new Jd(null, fileName, blobName, null, null, null);
+		}
+		throw new IllegalArgumentException("Unsupported file type: " + fileType.getSimpleName());
+
+	}
+
+	private <T extends File> T saveFile(T file) {
 		if (file != null) {
-			File existingFile = fileRepository.findByFileName(file.getFileName());
-			File newFile = null;
+
+			if (file instanceof Jd) {
+				log.info("Saving Job Description file: {}", file.getFileName());
+			} else if (file instanceof Resume) {
+				log.info("Saving Resume file: {}", file.getFileName());
+			}
+			var fileRepository = getRepository(file);
+			T existingFile = fileRepository.findByFileName(file.getFileName());
+			T newFile = null;
+
 			if (existingFile != null) {
 
 				existingFile.setBlobName(file.getBlobName());
@@ -91,8 +132,18 @@ public class FileServiceImpl implements FileService {
 
 		throw new RuntimeException("File cannot be null");
 	}
-	
-	
+
+	@SuppressWarnings("unchecked")
+	private <T extends File> FileRepository<T> getRepository(T file) {
+		if (file instanceof Jd) {
+			return (FileRepository<T>) jdRepository;
+		} else if (file instanceof Resume) {
+			return (FileRepository<T>) resumeRepository;
+		}
+
+		throw new IllegalArgumentException("Unsupported file type: " + file.getClass().getSimpleName());
+	}
+
 	public String getSharableUrl(String fileName) {
 
 		log.info("Generating sharable URL for file: {}", fileName);

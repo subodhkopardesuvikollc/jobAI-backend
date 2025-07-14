@@ -6,14 +6,12 @@ import org.bson.types.ObjectId;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Document
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
@@ -26,7 +24,7 @@ public class File {
 	private String fileName;
 	
 	private String blobName;
-	
+		
 	@CreatedDate
 	private LocalDateTime createdAt;
 	
@@ -42,7 +40,5 @@ public class File {
 		return "File [id=" + id + ", fileName=" + fileName + ", blobName=" + blobName + ", createdAt=" + createdAt
 				+ ", updatedAt=" + updatedAt + "]";
 	}
-	
-	
 
 }

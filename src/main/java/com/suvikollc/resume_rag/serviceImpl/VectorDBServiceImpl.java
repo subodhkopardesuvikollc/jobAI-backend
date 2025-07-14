@@ -26,9 +26,10 @@ import com.azure.storage.file.share.ShareServiceClient;
 import com.azure.storage.file.share.models.ShareFileItem;
 import com.suvikollc.resume_rag.dto.SearchResultsDto;
 import com.suvikollc.resume_rag.service.FileService;
+import com.suvikollc.resume_rag.service.VectorDBService;
 
 @Service
-public class VectorDBServiceImpl {
+public class VectorDBServiceImpl implements VectorDBService{
 
 	private static final Logger log = LoggerFactory.getLogger(VectorDBServiceImpl.class);
 
