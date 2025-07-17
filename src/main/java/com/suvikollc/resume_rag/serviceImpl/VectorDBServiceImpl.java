@@ -19,17 +19,21 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Service;
 
+import com.azure.storage.blob.BlobClient;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.file.share.ShareClient;
 import com.azure.storage.file.share.ShareDirectoryClient;
 import com.azure.storage.file.share.ShareFileClient;
 import com.azure.storage.file.share.ShareServiceClient;
 import com.azure.storage.file.share.models.ShareFileItem;
+import com.suvikollc.resume_rag.dto.ResumeResultsDto;
 import com.suvikollc.resume_rag.dto.SearchResultsDto;
 import com.suvikollc.resume_rag.service.FileService;
 import com.suvikollc.resume_rag.service.VectorDBService;
 
 @Service
-public class VectorDBServiceImpl implements VectorDBService{
+public class VectorDBServiceImpl implements VectorDBService {
 
 	private static final Logger log = LoggerFactory.getLogger(VectorDBServiceImpl.class);
 
@@ -39,14 +43,23 @@ public class VectorDBServiceImpl implements VectorDBService{
 	@Autowired
 	private ShareServiceClient shareServiceClient;
 
+	@Autowired
+	private BlobServiceClient blobServiceClient;
+
 	@Value("${azure.storage.share.name}")
 	private String shareName;
+
+	@Value("${azure.storage.resume.container.name}")
+	private String resumeContainerName;
 
 	@Autowired
 	private KafkaProducer kafkaProducer;
 
 	@Autowired
 	private FileService fileService;
+
+	@Value("${azure.storage.jd.container.name}")
+	private String jdContainerName;
 
 	public void uploadToVectorDB(String fileName) {
 		log.info("Processing document from file share: {}", fileName);
@@ -84,20 +97,33 @@ public class VectorDBServiceImpl implements VectorDBService{
 		}
 	}
 
-	private Map<String, Double> queryDocument(String query) {
+	private Map<String, Double> queryDocument(String jdBlobName) {
 
 		try {
-			var searchConfig = SearchRequest.builder().query(query).topK(10).similarityThreshold(0.5).build();
+			BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(jdContainerName);
 
-			List<Document> similaritySearch = vectorStore.similaritySearch(searchConfig);
-			Map<String, Double> fileNames = similaritySearch.stream().collect(Collectors.toMap(doc -> {
-				if (doc.getMetadata().get("source_file") == null) {
-					log.warn("Document metadata does not contain 'source_file': {}", doc.getMetadata());
-					return doc.getMetadata().get("source").toString();
-				}
-				return doc.getMetadata().get("source_file").toString();
-			}, Document::getScore, (existing, newScore) -> Math.max(existing, newScore), LinkedHashMap::new));
-			return fileNames;
+			BlobClient blobClient = blobContainerClient.getBlobClient(jdBlobName);
+			if (!blobClient.exists()) {
+				log.error("JD file not found: {}", jdBlobName);
+				throw new RuntimeException("JD file not found: " + jdBlobName);
+			}
+
+			try (InputStream inputStream = blobClient.openInputStream()) {
+
+				String content = extractContent(inputStream);
+
+				var searchConfig = SearchRequest.builder().query(content).topK(10).similarityThreshold(0.5).build();
+
+				List<Document> similaritySearch = vectorStore.similaritySearch(searchConfig);
+				Map<String, Double> resumes = similaritySearch.stream().collect(Collectors.toMap(doc -> {
+					if (doc.getMetadata().get("source_file") == null) {
+						log.warn("Document metadata does not contain 'source_file': {}", doc.getMetadata());
+						return doc.getMetadata().get("source").toString();
+					}
+					return doc.getMetadata().get("source_file").toString();
+				}, Document::getScore, (existing, newScore) -> Math.max(existing, newScore), LinkedHashMap::new));
+				return resumes;
+			}
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -131,27 +157,49 @@ public class VectorDBServiceImpl implements VectorDBService{
 		}
 	}
 
-	public List<SearchResultsDto> getResults(String query) {
+	public SearchResultsDto getResults(String jdBlobName) {
 
-		Map<String, Double> results = queryDocument(query);
+		Map<String, Double> resumes = queryDocument(jdBlobName);
+		String jdUrl = fileService.getSharableUrl(jdBlobName, jdContainerName);
 
 		try {
-			if (results == null || results.isEmpty()) {
-				log.info("No results found for query: {}", query);
-				return List.of();
+			if (resumes == null || resumes.isEmpty()) {
+				log.info("No results found for query: {}", jdBlobName);
+				return new SearchResultsDto(jdUrl, List.of());
 			}
 
-			return results.entrySet().stream().map(entry -> {
-				String fileName = entry.getKey();
+			var resumeResult = resumes.entrySet().stream().map(entry -> {
+				String resumeName = entry.getKey();
+				if (resumeName != null && !resumeName.isBlank()) {
+				}
 				Double score = entry.getValue();
-				String fileUrl = fileService.getSharableUrl(fileName);
-				return new SearchResultsDto(fileName, fileUrl, score);
+				String resumeUrl = fileService.getSharableUrl(resumeName, resumeContainerName);
+				return new ResumeResultsDto(resumeName, resumeUrl, score);
 			}).collect(Collectors.toList());
+
+			return new SearchResultsDto(jdUrl, resumeResult);
+
 		} catch (Exception e) {
-			log.error("Error processing results for query '{}': {}", query, e.getMessage());
+			log.error("Error processing results for query '{}': {}", jdBlobName, e.getMessage());
 			throw new RuntimeException("Error processing results", e);
 		}
 
+	}
+
+	private String extractContent(InputStream stream) {
+		try {
+			StringBuilder contentBuilder = new StringBuilder();
+			var resource = new InputStreamResource(stream);
+			var tikaReader = new TikaDocumentReader(resource);
+			tikaReader.get().stream().forEach(doc -> {
+				contentBuilder.append(doc.getText());
+			});
+
+			return contentBuilder.toString();
+		} catch (Exception e) {
+			log.error("Error extracting content from stream: {}", e.getMessage());
+			throw new RuntimeException("Error extracting content", e);
+		}
 	}
 
 }

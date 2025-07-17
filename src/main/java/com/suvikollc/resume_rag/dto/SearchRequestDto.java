@@ -1,26 +1,17 @@
 package com.suvikollc.resume_rag.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
 public class SearchRequestDto {
 
-	String query;
+	String blobName;
 
-	public SearchRequestDto() {
-	}
-
-	public SearchRequestDto(String query) {
-		this.query = query;
-	}
-
-	public String query() {
-		return query;
-	}
-
-	public String getQuery() {
-		return query;
-	}
-
-	public void setQuery(String query) {
-		this.query = query;
-	}
 
 }
