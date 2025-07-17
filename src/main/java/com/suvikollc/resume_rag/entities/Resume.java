@@ -15,12 +15,10 @@ import lombok.Setter;
 @Setter
 @Document(collection = "resumes")
 public class Resume extends File {
-	
 
-	private List<String> jdIds;
-	public Resume(ObjectId id, String fileName, String blobName,LocalDateTime createdAt, LocalDateTime updatedAt, List<String> jdIds) {
+	public Resume(ObjectId id, String fileName, String blobName, LocalDateTime createdAt, LocalDateTime updatedAt) {
 		super(id, fileName, blobName, createdAt, updatedAt);
-		this.jdIds = jdIds;
+
 	}
 
 	public String toString() {

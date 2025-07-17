@@ -2,11 +2,16 @@ package com.suvikollc.resume_rag.serviceImpl;
 
 import java.io.InputStream;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,9 +19,9 @@ import org.springframework.web.multipart.MultipartFile;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
-import com.azure.storage.file.share.ShareServiceClient;
-import com.azure.storage.file.share.sas.ShareFileSasPermission;
-import com.azure.storage.file.share.sas.ShareServiceSasSignatureValues;
+import com.azure.storage.blob.sas.BlobSasPermission;
+import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
+import com.suvikollc.resume_rag.dto.FileDTO;
 import com.suvikollc.resume_rag.entities.File;
 import com.suvikollc.resume_rag.entities.Jd;
 import com.suvikollc.resume_rag.entities.Resume;
@@ -46,9 +51,6 @@ public class FileServiceImpl implements FileService {
 	private String jdContainerName;
 
 	@Autowired
-	private ShareServiceClient shareServiceClient;
-
-	@Autowired
 	private BlobServiceClient blobServiceClient;
 
 	@Transactional
@@ -62,7 +64,7 @@ public class FileServiceImpl implements FileService {
 
 		try (InputStream inputStream = file.getInputStream()) {
 
-			var savedFile = createFileInstance(fileType, containerName, blobName);
+			var savedFile = createFileInstance(fileType, file.getOriginalFilename(), blobName);
 			savedFile = saveFile(savedFile);
 
 			blobClient.upload(inputStream, file.getSize(), true);
@@ -97,7 +99,7 @@ public class FileServiceImpl implements FileService {
 	private <T extends File> T createFileInstance(Class<T> fileType, String fileName, String blobName) {
 
 		if (fileType.equals(Resume.class)) {
-			return (T) new Resume(null, fileName, blobName, null, null, null);
+			return (T) new Resume(null, fileName, blobName, null, null);
 		} else if (fileType.equals(Jd.class)) {
 			return (T) new Jd(null, fileName, blobName, null, null, null);
 		}
@@ -144,29 +146,79 @@ public class FileServiceImpl implements FileService {
 		throw new IllegalArgumentException("Unsupported file type: " + file.getClass().getSimpleName());
 	}
 
-	public String getSharableUrl(String fileName) {
+	public String getSharableUrl(String blobName, String containerName) {
 
-		log.info("Generating sharable URL for file: {}", fileName);
+		log.info("Generating sharable URL for file: {}", blobName);
 		try {
-			var shareClient = shareServiceClient.getShareClient(shareName);
-			var fileClient = shareClient.getRootDirectoryClient().getFileClient(fileName);
-			if (!fileClient.exists()) {
-				log.error("File not found for generating sharable URL: {}", fileName);
+			var blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
+			var blobClient = blobContainerClient.getBlobClient(blobName);
+			if (!blobClient.exists()) {
+				log.error("File not found for generating sharable URL: {}", blobName);
 				return null;
 			}
 			OffsetDateTime expiryTime = OffsetDateTime.now().plusDays(1);
 
-			ShareFileSasPermission permissions = new ShareFileSasPermission().setReadPermission(true);
-			ShareServiceSasSignatureValues signatureValues = new ShareServiceSasSignatureValues(expiryTime, permissions)
+			BlobSasPermission permissions = new BlobSasPermission().setReadPermission(true);
+			BlobServiceSasSignatureValues signatureValues = new BlobServiceSasSignatureValues(expiryTime, permissions)
 					.setContentDisposition("inline");
-			String sasToken = fileClient.generateSas(signatureValues);
+			String sasToken = blobClient.generateSas(signatureValues);
 
-			return String.format("%s?%s", fileClient.getFileUrl(), sasToken);
+			return String.format("%s?%s", blobClient.getBlobUrl(), sasToken);
 		} catch (Exception e) {
 			log.error("Failed to generate sharable URL: " + e.getMessage());
 			e.printStackTrace();
 			throw new RuntimeException("Error generating sharable URL", e);
 		}
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public <T extends File> List<T> getAllFiles(Class<T> fileType) {
+
+		if (fileType.equals(Resume.class)) {
+			return (List<T>) resumeRepository.findAll();
+		} else if (fileType.equals(Jd.class)) {
+			return (List<T>) jdRepository.findAll();
+		}
+
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public <T extends File> List<FileDTO<T>> getAllFilesWithUrl(Class<T> fileType) {
+		List<T> file = null;
+		if (fileType.equals(Resume.class)) {
+			file = (List<T>) resumeRepository.findAll();
+		} else if (fileType.equals(Jd.class)) {
+			file = (List<T>) jdRepository.findAll();
+		}
+		List<FileDTO<T>> fileDtos = file.stream().map(f -> {
+			String sharableUrl = getSharableUrl(f.getBlobName(), getContainerName(fileType));
+			return new FileDTO<>(f, sharableUrl);
+		}).toList();
+
+		return fileDtos;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public <T extends File> Page<FileDTO<T>> getAllFilesWithUrl(Class<T> fileType, Integer page, Integer size) {
+
+		Pageable pageable = PageRequest.of(page, size);
+		Page<T> file = null;
+		if (fileType.equals(Resume.class)) {
+			file = (Page<T>) resumeRepository.findAll(pageable);
+		} else if (fileType.equals(Jd.class)) {
+			file = (Page<T>) jdRepository.findAll();
+		}
+		List<FileDTO<T>> fileDtos = file.getContent().stream().map(f -> {
+			String sharableUrl = getSharableUrl(f.getBlobName(), getContainerName(fileType));
+			return new FileDTO<>(f, sharableUrl);
+		}).toList();
+		PageImpl<FileDTO<T>> paginatedFiles = new PageImpl<>(fileDtos, pageable, file.getTotalElements());
+
+		return paginatedFiles;
 	}
 
 }
