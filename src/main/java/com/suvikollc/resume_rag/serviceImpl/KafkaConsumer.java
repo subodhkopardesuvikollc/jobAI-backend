@@ -12,7 +12,7 @@ public class KafkaConsumer {
 	Logger log = LoggerFactory.getLogger(this.getClass());
 
 	@Autowired
-	VectorDBServiceImpl ingestionSerivce;
+	VectorDBServiceImpl vectorDBService;
 
 	@KafkaListener(topics = "resume-upload-events", groupId = "resume-group")
 	public void listenForNewFile(String fileName) {
@@ -21,7 +21,7 @@ public class KafkaConsumer {
 
 		try {
 
-			ingestionSerivce.uploadToVectorDB(fileName);
+			vectorDBService.uploadToVectorDB(fileName);
 
 			log.info("Successfully processed event for fileName: " + fileName);
 

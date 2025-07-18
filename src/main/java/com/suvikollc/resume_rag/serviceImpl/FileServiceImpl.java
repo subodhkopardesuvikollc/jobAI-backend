@@ -41,8 +41,6 @@ public class FileServiceImpl implements FileService {
 	@Autowired
 	private JdRepository jdRepository;
 
-	@Value("${azure.storage.share.name}")
-	private String shareName;
 
 	@Value("${azure.storage.resume.container.name}")
 	private String resumeContainerName;
