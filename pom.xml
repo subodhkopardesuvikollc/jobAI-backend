@@ -69,11 +69,6 @@
 			<artifactId>spring-kafka</artifactId>
 		</dependency>
 
-		<dependency>
-			<groupId>com.azure.spring</groupId>
-			<artifactId>spring-cloud-azure-starter-storage-file-share</artifactId>
-		</dependency>
-
 
 		<dependency>
 			<groupId>com.azure.spring</groupId>

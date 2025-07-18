@@ -22,11 +22,7 @@ import org.springframework.stereotype.Service;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
-import com.azure.storage.file.share.ShareClient;
-import com.azure.storage.file.share.ShareDirectoryClient;
-import com.azure.storage.file.share.ShareFileClient;
-import com.azure.storage.file.share.ShareServiceClient;
-import com.azure.storage.file.share.models.ShareFileItem;
+import com.azure.storage.blob.models.BlobItem;
 import com.suvikollc.resume_rag.dto.ResumeResultsDto;
 import com.suvikollc.resume_rag.dto.SearchResultsDto;
 import com.suvikollc.resume_rag.service.FileService;
@@ -41,13 +37,7 @@ public class VectorDBServiceImpl implements VectorDBService {
 	private VectorStore vectorStore;
 
 	@Autowired
-	private ShareServiceClient shareServiceClient;
-
-	@Autowired
 	private BlobServiceClient blobServiceClient;
-
-	@Value("${azure.storage.share.name}")
-	private String shareName;
 
 	@Value("${azure.storage.resume.container.name}")
 	private String resumeContainerName;
@@ -64,16 +54,15 @@ public class VectorDBServiceImpl implements VectorDBService {
 	public void uploadToVectorDB(String fileName) {
 		log.info("Processing document from file share: {}", fileName);
 		try {
-			ShareClient shareClient = shareServiceClient.getShareClient(shareName);
-			ShareDirectoryClient rootDirClient = shareClient.getRootDirectoryClient();
-			ShareFileClient fileClient = rootDirClient.getFileClient(fileName);
+			BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(resumeContainerName);
+	        BlobClient blobClient = blobContainerClient.getBlobClient(fileName);
 
-			if (!fileClient.exists()) {
+			if (!blobClient.exists()) {
 				log.error("File not found during processing: {}", fileName);
 				throw new RuntimeException("File not found: " + fileName);
 			}
 
-			InputStream fileInputStream = fileClient.openInputStream();
+			InputStream fileInputStream = blobClient.openInputStream();
 			var resource = new InputStreamResource(fileInputStream, fileName);
 			var tikaReader = new TikaDocumentReader(resource);
 			List<Document> documents = tikaReader.get();
@@ -137,12 +126,12 @@ public class VectorDBServiceImpl implements VectorDBService {
 		log.info("Initiating document upload...");
 
 		try {
-			var shareClient = shareServiceClient.getShareClient(shareName);
-			var rootDirClient = shareClient.getRootDirectoryClient();
+			BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(resumeContainerName);
+			var blobItems = blobContainerClient.listBlobs();
 
-			for (ShareFileItem fileItem : rootDirClient.listFilesAndDirectories()) {
+			for (BlobItem blobItem : blobItems) {
 
-				String fileName = fileItem.getName();
+				String fileName = blobItem.getName();
 
 				if (fileName != null) {
 
