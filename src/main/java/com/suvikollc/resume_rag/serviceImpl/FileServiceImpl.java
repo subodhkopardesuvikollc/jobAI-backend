@@ -6,8 +6,10 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -41,7 +43,6 @@ public class FileServiceImpl implements FileService {
 	@Autowired
 	private JdRepository jdRepository;
 
-
 	@Value("${azure.storage.resume.container.name}")
 	private String resumeContainerName;
 
@@ -54,11 +55,9 @@ public class FileServiceImpl implements FileService {
 	@Transactional
 	public <T extends File> T uploadFile(MultipartFile file, Class<T> fileType) {
 		String containerName = getContainerName(fileType);
-		BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
-
 		String blobName = file.getOriginalFilename();
 
-		BlobClient blobClient = blobContainerClient.getBlobClient(blobName);
+		var blobClient = getBlobClient(blobName, containerName);
 
 		try (InputStream inputStream = file.getInputStream()) {
 
@@ -80,6 +79,12 @@ public class FileServiceImpl implements FileService {
 			throw new RuntimeException("Failed to upload file: " + e.getMessage(), e);
 		}
 
+	}
+
+	public BlobClient getBlobClient(String blobName, String containerName) {
+		BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
+		BlobClient blobClient = blobContainerClient.getBlobClient(blobName);
+		return blobClient;
 	}
 
 	private String getContainerName(Class<?> fileType) {
@@ -148,11 +153,12 @@ public class FileServiceImpl implements FileService {
 
 		log.info("Generating sharable URL for file: {}", blobName);
 		try {
-			var blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
-			var blobClient = blobContainerClient.getBlobClient(blobName);
+
+			var blobClient = getBlobClient(blobName, containerName);
+
 			if (!blobClient.exists()) {
 				log.error("File not found for generating sharable URL: {}", blobName);
-				return null;
+				throw new RuntimeException("File not found: " + blobName);
 			}
 			OffsetDateTime expiryTime = OffsetDateTime.now().plusDays(1);
 
@@ -217,6 +223,22 @@ public class FileServiceImpl implements FileService {
 		PageImpl<FileDTO<T>> paginatedFiles = new PageImpl<>(fileDtos, pageable, file.getTotalElements());
 
 		return paginatedFiles;
+	}
+
+	public String extractContent(InputStream stream) {
+		try {
+			StringBuilder contentBuilder = new StringBuilder();
+			var resource = new InputStreamResource(stream);
+			var tikaReader = new TikaDocumentReader(resource);
+			tikaReader.get().stream().forEach(doc -> {
+				contentBuilder.append(doc.getText());
+			});
+
+			return contentBuilder.toString();
+		} catch (Exception e) {
+			log.error("Error extracting content from stream: {}", e.getMessage());
+			throw new RuntimeException("Error extracting content", e);
+		}
 	}
 
 }
