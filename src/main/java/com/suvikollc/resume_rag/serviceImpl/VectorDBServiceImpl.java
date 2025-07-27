@@ -19,7 +19,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Service;
 
-import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.models.BlobItem;
@@ -54,11 +53,10 @@ public class VectorDBServiceImpl implements VectorDBService {
 	public void uploadToVectorDB(String fileName) {
 		log.info("Processing document from file share: {}", fileName);
 		try {
-			BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(resumeContainerName);
-	        BlobClient blobClient = blobContainerClient.getBlobClient(fileName);
 
+			var blobClient = fileService.getBlobClient(fileName, resumeContainerName);
 			if (!blobClient.exists()) {
-				log.error("File not found during processing: {}", fileName);
+				log.error("File not found: {}", fileName);
 				throw new RuntimeException("File not found: " + fileName);
 			}
 
@@ -89,9 +87,8 @@ public class VectorDBServiceImpl implements VectorDBService {
 	private Map<String, Double> queryDocument(String jdBlobName) {
 
 		try {
-			BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(jdContainerName);
 
-			BlobClient blobClient = blobContainerClient.getBlobClient(jdBlobName);
+			var blobClient = fileService.getBlobClient(jdBlobName, jdContainerName);
 			if (!blobClient.exists()) {
 				log.error("JD file not found: {}", jdBlobName);
 				throw new RuntimeException("JD file not found: " + jdBlobName);
@@ -99,7 +96,7 @@ public class VectorDBServiceImpl implements VectorDBService {
 
 			try (InputStream inputStream = blobClient.openInputStream()) {
 
-				String content = extractContent(inputStream);
+				String content = fileService.extractContent(inputStream);
 
 				var searchConfig = SearchRequest.builder().query(content).topK(10).similarityThreshold(0.5).build();
 
@@ -173,22 +170,6 @@ public class VectorDBServiceImpl implements VectorDBService {
 			throw new RuntimeException("Error processing results", e);
 		}
 
-	}
-
-	private String extractContent(InputStream stream) {
-		try {
-			StringBuilder contentBuilder = new StringBuilder();
-			var resource = new InputStreamResource(stream);
-			var tikaReader = new TikaDocumentReader(resource);
-			tikaReader.get().stream().forEach(doc -> {
-				contentBuilder.append(doc.getText());
-			});
-
-			return contentBuilder.toString();
-		} catch (Exception e) {
-			log.error("Error extracting content from stream: {}", e.getMessage());
-			throw new RuntimeException("Error extracting content", e);
-		}
 	}
 
 }

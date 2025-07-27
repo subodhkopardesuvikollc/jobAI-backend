@@ -1,5 +1,8 @@
 package com.suvikollc.resume_rag.controller;
 
+import java.util.List;
+
+import org.springframework.ai.document.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.suvikollc.resume_rag.entities.Jd;
 import com.suvikollc.resume_rag.entities.Resume;
 import com.suvikollc.resume_rag.service.FileService;
+import com.suvikollc.resume_rag.service.ResumeChunkingService;
 import com.suvikollc.resume_rag.service.VectorDBService;
 
 @RestController
@@ -20,6 +24,23 @@ public class UploadController {
 
 	@Autowired
 	FileService fileService;
+
+	@Autowired
+	ResumeChunkingService resumeChunkingService;
+
+	@PostMapping("/chunk")
+	public List<Document> chunkResume() {
+		String fileName = "Resume.Saivarun__.pdf";
+		var blobClient = fileService.getBlobClient(fileName, "resumes");
+
+		var InputStream = blobClient.openInputStream();
+		String resumeContent = fileService.extractContent(InputStream);
+
+		List<Document> chunkResume = resumeChunkingService.chunkResume(resumeContent, fileName);
+		System.out.println("Number of chunks " + chunkResume.size());
+		return chunkResume;
+
+	}
 
 	@PostMapping("/resume/upload")
 	public ResponseEntity<?> uploadResume(@RequestParam MultipartFile file) {
