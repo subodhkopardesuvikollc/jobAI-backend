@@ -17,8 +17,8 @@ public class ResumeChunkingServiceImpl implements ResumeChunkingService {
 
 	private static final String[] SECTION_HEADERS = { "Summary", "Professional Summary", "About Me", "Experience",
 			"Employment History", "Professional Experience", "Work Experience", "Education", "Education Details",
-			"Skills", "Technical Skills", "Relevant Skills", "Projects", "Project Experience", "Projects Overview", "Portfolio", "Awards",
-			"Certifications", "Publications", "Interests", "Volunteer Experience" };
+			"Skills", "Technical Skills", "Relevant Skills", "Projects", "Project Experience", "Projects Overview",
+			"Portfolio", "Awards", "Certifications", "Publications", "Interests", "Volunteer Experience" };
 
 	private static final Pattern SECTION_PATTERN;
 	static {
@@ -68,7 +68,7 @@ public class ResumeChunkingServiceImpl implements ResumeChunkingService {
 
 	private void addSectionContentAsDocuments(List<Document> documents, String sectionContent,
 			String currentSectionTitle, String resumeFileName, int baseSectionIndex) {
-		final int MAX_CHARACTERS_PER_CHUNK = 2000;
+		final int MAX_CHARACTERS_PER_CHUNK = 8000;
 
 		if (sectionContent.length() > MAX_CHARACTERS_PER_CHUNK) {
 			List<String> subChunks = chunkTextFixedSize(sectionContent, MAX_CHARACTERS_PER_CHUNK, 200);

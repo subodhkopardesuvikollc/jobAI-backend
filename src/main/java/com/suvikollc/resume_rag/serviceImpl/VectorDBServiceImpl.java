@@ -10,8 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
-import org.springframework.ai.transformer.splitter.TextSplitter;
-import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +23,7 @@ import com.azure.storage.blob.models.BlobItem;
 import com.suvikollc.resume_rag.dto.ResumeResultsDto;
 import com.suvikollc.resume_rag.dto.SearchResultsDto;
 import com.suvikollc.resume_rag.service.FileService;
+import com.suvikollc.resume_rag.service.ResumeChunkingService;
 import com.suvikollc.resume_rag.service.VectorDBService;
 
 @Service
@@ -47,6 +46,9 @@ public class VectorDBServiceImpl implements VectorDBService {
 	@Autowired
 	private FileService fileService;
 
+	@Autowired
+	private ResumeChunkingService chunkingService;
+
 	@Value("${azure.storage.jd.container.name}")
 	private String jdContainerName;
 
@@ -65,14 +67,21 @@ public class VectorDBServiceImpl implements VectorDBService {
 			var tikaReader = new TikaDocumentReader(resource);
 			List<Document> documents = tikaReader.get();
 
-			TextSplitter textSplitter = new TokenTextSplitter();
-			List<Document> chunkedDocuments = textSplitter.apply(documents);
+//			TextSplitter textSplitter = new TokenTextSplitter();
+//			List<Document> chunkedDocuments = textSplitter.apply(documents);
+			String resumeContent = fileService.extractContent(documents);
+
+			List<Document> chunkedDocuments = chunkingService.chunkResume(resumeContent, fileName);
+
 			log.info("Split document {} into {} chunks.", fileName, chunkedDocuments.size());
 
 			for (int i = 0; i < chunkedDocuments.size(); i++) {
 				Document chunk = chunkedDocuments.get(i);
 				String uniqueId = fileName + "-chunk-" + i;
 				chunk.getMetadata().put("id", uniqueId);
+				String sectionName = (String) chunk.getMetadata().get("section");
+				chunk.getMetadata().put("section", sectionName.toLowerCase());
+
 				chunk.getMetadata().put("source_file", fileName);
 			}
 

@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -253,6 +254,15 @@ public class FileServiceImpl implements FileService {
 			log.error("Error extracting content from stream: {}", e.getMessage());
 			throw new RuntimeException("Error extracting content", e);
 		}
+	}
+
+	public String extractContent(List<Document> documents) {
+
+		StringBuilder contentBuilder = new StringBuilder();
+		documents.stream().forEach(doc -> {
+			contentBuilder.append(doc.getText());
+		});
+		return contentBuilder.toString();
 	}
 
 	private String getEmailId(InputStream inputStream) {
