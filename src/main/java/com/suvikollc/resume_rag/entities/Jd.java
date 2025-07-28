@@ -17,6 +17,8 @@ import lombok.Setter;
 @Getter
 @Setter
 public class Jd extends File {
+	
+	private String keywords;
 
 	public Jd(ObjectId id, String fileName, String blobName, Map<String, Double> resumeIds, LocalDateTime createdAt,
 			LocalDateTime updatedAt) {
