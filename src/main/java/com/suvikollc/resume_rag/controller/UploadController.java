@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.azure.core.annotation.QueryParam;
 import com.suvikollc.resume_rag.entities.Jd;
 import com.suvikollc.resume_rag.entities.Resume;
+import com.suvikollc.resume_rag.service.EmailService;
 import com.suvikollc.resume_rag.service.FileService;
 import com.suvikollc.resume_rag.service.JDService;
 import com.suvikollc.resume_rag.service.ResumeChunkingService;
@@ -38,6 +39,9 @@ public class UploadController {
 	@Autowired
 	ResumeService resumeService;
 
+	@Autowired
+	EmailService emailService;
+
 	@PostMapping("/chunk")
 	public List<Document> chunkResume() {
 		String fileName = "Resume.Saivarun__.pdf";
@@ -53,17 +57,19 @@ public class UploadController {
 	}
 
 	@GetMapping("/resume-retrieve")
-	public ResponseEntity<?> getJdKeywords(@QueryParam(value = "") String jdBlobName) {
-		String fileName = "Jani Syed Resume(Java Full Stack) (1).docx";
+	public ResponseEntity<?> getJdKeywords(@QueryParam(value = "") String jdBlobName,
+			@QueryParam(value = "") String resumeBlobName) {
+		System.out.println("jdBlobName: " + jdBlobName);
+		System.out.println(jdBlobName.split("\\.")[0]);
 
-		try {
-			String keywords = "Extracted Keywords: Frontend Engineer, development, implementation, testing, operational tooling, engineering teams, performant applications, operational excellence, productivity improvement, detail oriented, organizational skills, independent work, multitasking, professionalism, software engineering practices, front end applications, software and hardware systems interaction, design and implementation, complex systems, JavaScript, HTML, CSS, web development, mobile development, object-oriented design, data structures, algorithm design, problem solving, complexity analysis, React, Bachelor’s degree, Computer Science, Computer Engineering, AWS Certified\r\n"
-					+ "";
+		String jobTitle = jdBlobName.split("\\.")[0];
 
-			return ResponseEntity.ok(resumeService.retrieveRelavantCandidateWork(fileName, jdBlobName, keywords));
-		} catch (Exception e) {
-			return ResponseEntity.status(500).body("Failed to extract keywords: " + e.getMessage());
+		var response = emailService.generateCustomReachOutEmail(resumeBlobName, jobTitle, jdBlobName);
+		if (response == null) {
+			return ResponseEntity.badRequest().body("Failed to generate email");
 		}
+		return ResponseEntity.ok(response);
+
 	}
 
 	@PostMapping("/resume/upload")
