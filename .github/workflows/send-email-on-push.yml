@@ -1,0 +1,51 @@
+name: Send Email on Push to Main
+
+on:
+  push:
+    branches:
+      - feature/email-service # Trigger this workflow on pushes to the 'main' branch
+
+jobs:
+  send_commit_email:
+    runs-on: ubuntu-latest # Run the job on an Ubuntu virtual machine
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 # Checkout the repository code
+
+      - name: Get commit message
+        id: get_message
+        run: |
+          # Get the full commit message for the latest commit
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+          # Make the commit message available as an output
+          echo "commit_message<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3 # Use the action to send an email
+        with:
+          # SMTP server details, using GitHub Secrets for security
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          # Sender and recipient details
+          subject: 'New Commit on ${{ github.repository }} - ${{ github.sha }}' # Email subject
+          to: ${{ secrets.RECIPIENT_EMAIL }} # Recipient email, using GitHub Secret
+          from: ${{ secrets.MAIL_USERNAME }} # Sender email
+          # Email body containing the commit message
+          body: |
+            A new commit has been pushed to the 'main' branch of the repository:
+            Repository: ${{ github.repository }}
+            Commit SHA: ${{ github.sha }}
+            Commit Author: ${{ github.event.head_commit.author.name }} <${{ github.event.head_commit.author.email }}>
+            Commit Message:
+            ${{ steps.get_message.outputs.commit_message }}
+
+            View the commit: ${{ github.event.head_commit.url }}
+          # Set content type to plain text
+          content_type: text/plain
+          # Enable SSL if your SMTP server requires it (most do)
+          secure: true
