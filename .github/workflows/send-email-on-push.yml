@@ -45,7 +45,6 @@ jobs:
             ${{ steps.get_message.outputs.commit_message }}
 
             View the commit: ${{ github.event.head_commit.url }}
-          # Set content type to plain text
-          content_type: text/plain
+
           # Enable SSL if your SMTP server requires it (most do)
           secure: true
