@@ -32,16 +32,19 @@ jobs:
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
           # Sender and recipient details
-          subject: 'New Commit on ${{ github.repository }} - ${{ github.sha }}' # Email subject
+          subject: 'New Update Pushed to Resume-Rag Backend Application' # Email subject
           to: ${{ secrets.RECIPIENT_EMAIL }} # Recipient email, using GitHub Secret
           from: ${{ secrets.MAIL_USERNAME }} # Sender email
           # Email body containing the commit message
           body: |
-            A new commit has been pushed to the 'main' branch of the repository:
+            Great news! A new update has been pushed to the '${{ github.ref_name }}' branch of the repository.
+
             Repository: ${{ github.repository }}
-            Commit SHA: ${{ github.sha }}
-            Commit Author: ${{ github.event.head_commit.author.name }} <${{ github.event.head_commit.author.email }}>
+
+            Commit Author: ${{ github.event.head_commit.author.name }}
+            
             Commit Message:
+            
             ${{ steps.get_message.outputs.commit_message }}
 
             View the commit: ${{ github.event.head_commit.url }}
