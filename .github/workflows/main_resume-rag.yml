@@ -6,7 +6,7 @@ name: Build and deploy JAR app to Azure Web App - resume-rag
 on:
   push:
     branches:
-      - main
+      - feature/email-service
   workflow_dispatch:
 
 jobs:
