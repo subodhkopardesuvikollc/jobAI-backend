@@ -3,7 +3,7 @@ name: Send Email on Push to Main
 on:
   push:
     branches:
-      - feature/email-service # Trigger this workflow on pushes to the 'main' branch
+      - main # Trigger this workflow on pushes to the 'main' branch
 
 jobs:
   send_commit_email:
@@ -32,7 +32,7 @@ jobs:
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
           # Sender and recipient details
-          subject: "New Commit on ${{ github.repository }} - ${{ github.sha }}" # Email subject
+          subject: "New Update Pushed to Resume-Rag Backend Application" # Email subject
           to: ${{ secrets.RECIPIENT_EMAIL }} # Recipient email, using GitHub Secret
           from: ${{ secrets.MAIL_USERNAME }} # Sender email
           # Email body containing the commit message
