@@ -26,7 +26,7 @@ public class ResumeServiceImpl implements ResumeService {
 		FilterExpressionBuilder filterBuilder = new FilterExpressionBuilder();
 
 		Expression resumeAndSectionFilter = filterBuilder.and(filterBuilder.eq("source_file", resumeBlobName),
-				filterBuilder.in("section", "experience", "professional experience", "projects", "project experience",
+				filterBuilder.in("section", "experience", "professional experience", "projects", "projects (partial list)", "project experience",
 						"projects overview", "portfolio", "employment history"))
 				.build();
 

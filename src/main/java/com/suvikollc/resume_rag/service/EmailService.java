@@ -5,5 +5,7 @@ import com.suvikollc.resume_rag.dto.EmailDTO;
 public interface EmailService {
 	
 	EmailDTO generateCustomReachOutEmail(String resumeBlobName, String jobTitle, String jdBlobName);
+	
+	void sendEmail(EmailDTO emailDTO);
 
 }

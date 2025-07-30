@@ -8,4 +8,6 @@ public interface ResumeRepository extends FileRepository<Resume>{
 
 	List<String> findAllByFileNameIn(List<String> resumeFileNames);
 
+	Resume findByEmailId(String to);
+
 }
