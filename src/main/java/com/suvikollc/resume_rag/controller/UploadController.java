@@ -42,9 +42,8 @@ public class UploadController {
 	@Autowired
 	EmailService emailService;
 
-	@PostMapping("/chunk")
-	public List<Document> chunkResume() {
-		String fileName = "Resume.Saivarun__.pdf";
+	@GetMapping("/chunk")
+	public List<Document> chunkResume(@RequestParam String fileName) {
 		var blobClient = fileService.getBlobClient(fileName, "resumes");
 
 		var InputStream = blobClient.openInputStream();
@@ -56,21 +55,23 @@ public class UploadController {
 
 	}
 
-	@GetMapping("/resume-retrieve")
-	public ResponseEntity<?> getJdKeywords(@QueryParam(value = "") String jdBlobName,
-			@QueryParam(value = "") String resumeBlobName) {
-		System.out.println("jdBlobName: " + jdBlobName);
-		System.out.println(jdBlobName.split("\\.")[0]);
-
-		String jobTitle = jdBlobName.split("\\.")[0];
-
-		var response = emailService.generateCustomReachOutEmail(resumeBlobName, jobTitle, jdBlobName);
-		if (response == null) {
-			return ResponseEntity.badRequest().body("Failed to generate email");
-		}
-		return ResponseEntity.ok(response);
-
-	}
+//	@GetMapping("/resume-retrieve")
+//	public ResponseEntity<?> getJdKeywords(@QueryParam(value = "") String jdBlobName,
+//			@QueryParam(value = "") String resumeBlobName) {
+//		System.out.println("jdBlobName: " + jdBlobName);
+//		System.out.println(jdBlobName.split("\\.")[0]);
+//
+//		String jobTitle = jdBlobName.split("\\.")[0];
+//
+////		var response = emailService.generateCustomReachOutEmail(resumeBlobName, jobTitle, jdBlobName);
+//		var response = resumeService.retrieveRelavantCandidateWork(resumeBlobName, jobTitle,
+//				jdService.generateKeywords(jdBlobName));
+//		if (response == null) {
+//			return ResponseEntity.badRequest().body("Failed to generate email");
+//		}
+//		return ResponseEntity.ok(response);
+//
+//	}
 
 	@PostMapping("/resume/upload")
 	public ResponseEntity<?> uploadResume(@RequestParam MultipartFile file) {
