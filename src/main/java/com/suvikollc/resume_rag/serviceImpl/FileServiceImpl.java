@@ -280,4 +280,15 @@ public class FileServiceImpl implements FileService {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
+	@Override
+	public <T extends File> T getFileByFileName(String fileName, Class<T> fileType) {
+		if (fileType.equals(Resume.class)) {
+			return (T) resumeRepository.findByFileName(fileName);
+		} else if (fileType.equals(Jd.class)) {
+			return (T) jdRepository.findByFileName(fileName);
+		}
+		return null;
+	}
+
 }

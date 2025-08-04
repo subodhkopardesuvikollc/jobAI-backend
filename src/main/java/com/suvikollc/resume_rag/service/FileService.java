@@ -22,6 +22,8 @@ public interface FileService {
 	public String extractContent(InputStream stream);
 
 	public String extractContent(List<Document> documents);
+	
+	public <T extends File> T getFileByFileName(String fileName, Class<T> fileType);
 
 	public <T extends File> List<T> getAllFiles(Class<T> fileType);
 
