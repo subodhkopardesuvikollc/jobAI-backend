@@ -77,7 +77,7 @@ public class EmailServiceImpl implements EmailService {
 				}
 			}
 			candidateWorkSnippets = sb.toString().trim();
-			log.info("Retrieved snippets for LLM:\n" + candidateWorkSnippets);
+//			log.info("Retrieved snippets for LLM:\n" + candidateWorkSnippets);
 		} else {
 			log.info("No specific experience/project snippets found for " + resumeBlobName + ". Using fallback.");
 			candidateWorkSnippets = "their impressive background and achievements";
@@ -95,7 +95,7 @@ public class EmailServiceImpl implements EmailService {
 
 		String rawGeneratedText = chatClient.prompt(new Prompt(messages)).call().content();
 
-		log.info("Generated Email Content: \n" + rawGeneratedText);
+//		log.info("Generated Email Content: \n" + rawGeneratedText);
 
 		int subjectIndex = rawGeneratedText.indexOf("Subject:");
 		int bodyIndex = rawGeneratedText.indexOf("\n\nBody:");
@@ -144,12 +144,12 @@ public class EmailServiceImpl implements EmailService {
 			PollResponse<EmailSendResult> response = poller.waitForCompletion();
 			if (response.getValue() != null && response.getValue().getStatus() == EmailSendStatus.SUCCEEDED) {
 				log.info("Email sent successfully to " + emailDTO.getTo());
-				emailDTO.setEmailStatus(EmailDTO.status.SENT);
+				emailDTO.setStatus(EmailDTO.status.SENT);
 			} else {
 				log.error("Failed to send email to " + emailDTO.getTo() + ": " + response.getValue());
-				emailDTO.setEmailStatus(EmailDTO.status.FAILED);
+				emailDTO.setStatus(EmailDTO.status.FAILED);
 			}
-			emailDTO.setEmailType(EmailDTO.type.SENT);
+			emailDTO.setType(EmailDTO.type.SENT);
 			emailDTO.setCreatedAt(LocalDateTime.now());
 			var reachoutEmails = resume.getReachOutEmails();
 			if (reachoutEmails == null) {
@@ -161,7 +161,7 @@ public class EmailServiceImpl implements EmailService {
 
 		} catch (Exception e) {
 			log.error("Error sending email to " + emailDTO.getTo() + ": " + e.getMessage(), e);
-			emailDTO.setEmailStatus(EmailDTO.status.FAILED);
+			emailDTO.setStatus(EmailDTO.status.FAILED);
 			throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
 		} finally {
 			resumeRepository.save(resume);

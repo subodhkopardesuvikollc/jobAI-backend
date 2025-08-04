@@ -18,8 +18,8 @@ public class EmailDTO {
 	}
 	public enum type {
 		SENT, RECEIVED, GENERATED	}
-	private type emailType;
-	private status emailStatus;
+	private type type;
+	private status status;
 	private String to;
 	private String subject;
 	private String body;
