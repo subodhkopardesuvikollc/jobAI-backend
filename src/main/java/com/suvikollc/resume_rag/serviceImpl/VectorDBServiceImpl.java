@@ -13,6 +13,7 @@ import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Service;
@@ -47,6 +48,7 @@ public class VectorDBServiceImpl implements VectorDBService {
 	private FileService fileService;
 
 	@Autowired
+	@Qualifier("agenticChunkingImpl")
 	private ResumeChunkingService chunkingService;
 
 	@Value("${azure.storage.jd.container.name}")

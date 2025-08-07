@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.ai.document.Document;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +32,7 @@ public class UploadController {
 	FileService fileService;
 
 	@Autowired
+	@Qualifier("agenticChunkingImpl")
 	ResumeChunkingService resumeChunkingService;
 
 	@Autowired
@@ -46,12 +48,13 @@ public class UploadController {
 	public List<Document> chunkResume(@RequestParam String fileName) {
 		var blobClient = fileService.getBlobClient(fileName, "resumes");
 
-		var InputStream = blobClient.openInputStream();
-		String resumeContent = fileService.extractContent(InputStream);
+		try (var InputStream = blobClient.openInputStream()) {
 
-		List<Document> chunkResume = resumeChunkingService.chunkResume(resumeContent, fileName);
-		System.out.println("Number of chunks " + chunkResume.size());
-		return chunkResume;
+			String resumeContent = fileService.extractContent(InputStream);
+			List<Document> chunkResume = resumeChunkingService.chunkResume(resumeContent, fileName);
+			System.out.println("Number of chunks " + chunkResume.size());
+			return chunkResume;
+		}
 
 	}
 

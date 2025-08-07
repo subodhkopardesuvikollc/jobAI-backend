@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import com.suvikollc.resume_rag.service.ResumeChunkingService;
 
 @Service
-public class ResumeChunkingServiceImpl implements ResumeChunkingService {
+public class SectionBasedChunkingImpl implements ResumeChunkingService {
 
 	private static final String[] SECTION_HEADERS = { "Summary", "Professional Summary", "About Me", "Experience",
 			"Employment History", "Professional Experience", "Work Experience", "Education", "Education Details",
