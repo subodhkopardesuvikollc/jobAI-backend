@@ -39,7 +39,7 @@ public class SectionBasedChunkingImpl implements ResumeChunkingService {
 
 		int lastEnd = 0;
 		int sectionIndex = 0;
-		String currentSectionTitle = "Uncategorized";
+		String currentSectionTitle = "contact_info";
 
 		while (matcher.find()) {
 			String foundHeader = matcher.group();
@@ -54,6 +54,7 @@ public class SectionBasedChunkingImpl implements ResumeChunkingService {
 			}
 
 			currentSectionTitle = foundHeader.trim().replaceAll("(?i):?$", "").trim();
+			currentSectionTitle = normalizeSectionHeader(currentSectionTitle);
 			lastEnd = matcher.end();
 		}
 
@@ -109,6 +110,55 @@ public class SectionBasedChunkingImpl implements ResumeChunkingService {
 			}
 		}
 		return chunks;
+	}
+
+	private String normalizeSectionHeader(String sectionHeader) {
+		String lowerHeader = sectionHeader.toLowerCase().trim();
+		if (lowerHeader.contains("experience") || lowerHeader.contains("employment"))
+			return "experience";
+		if (lowerHeader.contains("project") || lowerHeader.contains("portfolio"))
+			return "projects";
+		if (lowerHeader.contains("skill") || lowerHeader.contains("proficiencies"))
+			return "skills";
+		if (lowerHeader.contains("education") || lowerHeader.contains("academic"))
+			return "education";
+		if (lowerHeader.contains("summary") || lowerHeader.contains("objective"))
+			return "summary";
+		return lowerHeader;
+	}
+
+	public Map<String, String> extractSections(String resumeContent) {
+
+		Map<String, String> sections = new HashMap<>();
+		Matcher matcher = SECTION_PATTERN.matcher(resumeContent);
+
+		int lastEnd = 0;
+		String currentSectionTitle = "contact_info";
+
+		while (matcher.find()) {
+			String foundHeader = matcher.group();
+			int start = matcher.start();
+
+			if (start > lastEnd) {
+				String sectionContent = resumeContent.substring(lastEnd, start).trim();
+				if (!sectionContent.isEmpty()) {
+					sections.put(currentSectionTitle, sectionContent);
+				}
+			}
+
+			currentSectionTitle = foundHeader.trim().replaceAll("(?i):?$", "").trim();
+			currentSectionTitle = normalizeSectionHeader(currentSectionTitle);
+			lastEnd = matcher.end();
+		}
+
+		if (lastEnd < resumeContent.length()) {
+			String content = resumeContent.substring(lastEnd).trim();
+			if (!content.isEmpty()) {
+				sections.put(currentSectionTitle, content);
+			}
+		}
+
+		return sections;
 	}
 
 }

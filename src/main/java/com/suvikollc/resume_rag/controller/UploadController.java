@@ -1,6 +1,7 @@
 package com.suvikollc.resume_rag.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.ai.document.Document;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,8 @@ import com.suvikollc.resume_rag.service.JDService;
 import com.suvikollc.resume_rag.service.ResumeChunkingService;
 import com.suvikollc.resume_rag.service.ResumeService;
 import com.suvikollc.resume_rag.service.VectorDBService;
+import com.suvikollc.resume_rag.serviceImpl.SectionBasedChunkingImpl;
+import com.suvikollc.resume_rag.serviceImpl.SemanticChunkingImpl;
 
 @RestController
 public class UploadController {
@@ -32,8 +35,14 @@ public class UploadController {
 	FileService fileService;
 
 	@Autowired
-	@Qualifier("agenticChunkingImpl")
+	@Qualifier("sectionBasedChunkingImpl")
 	ResumeChunkingService resumeChunkingService;
+
+	@Autowired
+	SemanticChunkingImpl semanticChunkingService;
+
+	@Autowired
+	SectionBasedChunkingImpl impl;
 
 	@Autowired
 	JDService jdService;
@@ -54,6 +63,22 @@ public class UploadController {
 			List<Document> chunkResume = resumeChunkingService.chunkResume(resumeContent, fileName);
 			System.out.println("Number of chunks " + chunkResume.size());
 			return chunkResume;
+		}
+
+	}
+
+	@GetMapping("/extract-sections")
+	public ResponseEntity<?> extractSections(@RequestParam String fileName) {
+		var blobClient = fileService.getBlobClient(fileName, "resumes");
+
+		try (var InputStream = blobClient.openInputStream()) {
+
+			String resumeContent = fileService.extractContent(InputStream);
+			Map<String, String> sections = impl.extractSections(resumeContent);
+
+			var experienceText = sections.remove("projects");
+
+			return ResponseEntity.ok(semanticChunkingService.chunk(experienceText, fileName, "experience"));
 		}
 
 	}
