@@ -39,6 +39,10 @@ public class UploadController {
 	ResumeChunkingService resumeChunkingService;
 
 	@Autowired
+	@Qualifier("agenticChunkingImpl")
+	ResumeChunkingService agenticChunkingService;
+
+	@Autowired
 	SemanticChunkingImpl semanticChunkingService;
 
 	@Autowired
@@ -60,7 +64,13 @@ public class UploadController {
 		try (var InputStream = blobClient.openInputStream()) {
 
 			String resumeContent = fileService.extractContent(InputStream);
-			List<Document> chunkResume = resumeChunkingService.chunkResume(resumeContent, fileName);
+			List<Document> chunkResume;
+			if (resumeContent.length() < 7500) {
+				chunkResume = agenticChunkingService.chunkResume(resumeContent, fileName);
+			} else {
+
+				chunkResume = resumeChunkingService.chunkResume(resumeContent, fileName);
+			}
 			System.out.println("Number of chunks " + chunkResume.size());
 			return chunkResume;
 		}

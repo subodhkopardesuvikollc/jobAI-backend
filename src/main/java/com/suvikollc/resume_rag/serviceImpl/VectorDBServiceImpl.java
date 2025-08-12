@@ -49,10 +49,16 @@ public class VectorDBServiceImpl implements VectorDBService {
 
 	@Autowired
 	@Qualifier("agenticChunkingImpl")
-	private ResumeChunkingService chunkingService;
+	private ResumeChunkingService agenticChunkingService;
+
+	@Autowired
+	@Qualifier("sectionBasedChunkingImpl")
+	private ResumeChunkingService sectionBasedChunkingImpl;
 
 	@Value("${azure.storage.jd.container.name}")
 	private String jdContainerName;
+	
+	private static final int CHARACTER_THRESHOLD = 7500;
 
 	public void uploadToVectorDB(String fileName) {
 		log.info("Processing document from file share: {}", fileName);
@@ -69,11 +75,13 @@ public class VectorDBServiceImpl implements VectorDBService {
 			var tikaReader = new TikaDocumentReader(resource);
 			List<Document> documents = tikaReader.get();
 
-//			TextSplitter textSplitter = new TokenTextSplitter();
-//			List<Document> chunkedDocuments = textSplitter.apply(documents);
 			String resumeContent = fileService.extractContent(documents);
-
-			List<Document> chunkedDocuments = chunkingService.chunkResume(resumeContent, fileName);
+			List<Document> chunkedDocuments;
+			if (resumeContent.length() < CHARACTER_THRESHOLD) {
+				chunkedDocuments = agenticChunkingService.chunkResume(resumeContent, fileName);
+			} else {
+				chunkedDocuments = sectionBasedChunkingImpl.chunkResume(resumeContent, fileName);
+			}
 
 			log.info("Split document {} into {} chunks.", fileName, chunkedDocuments.size());
 
