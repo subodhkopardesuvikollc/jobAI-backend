@@ -173,7 +173,7 @@ public class FileServiceImpl implements FileService {
 
 			if (!blobClient.exists()) {
 				log.error("File not found for generating sharable URL: {}", blobName);
-				throw new RuntimeException("File not found: " + blobName);
+				return null;
 			}
 			OffsetDateTime expiryTime = OffsetDateTime.now().plusDays(1);
 
@@ -185,8 +185,7 @@ public class FileServiceImpl implements FileService {
 			return String.format("%s?%s", blobClient.getBlobUrl(), sasToken);
 		} catch (Exception e) {
 			log.error("Failed to generate sharable URL: " + e.getMessage());
-			e.printStackTrace();
-			throw new RuntimeException("Error generating sharable URL", e);
+			return null;
 		}
 	}
 
