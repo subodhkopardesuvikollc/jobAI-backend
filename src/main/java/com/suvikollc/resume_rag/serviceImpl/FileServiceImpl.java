@@ -228,7 +228,7 @@ public class FileServiceImpl implements FileService {
 		if (fileType.equals(Resume.class)) {
 			file = (Page<T>) resumeRepository.findAll(pageable);
 		} else if (fileType.equals(Jd.class)) {
-			file = (Page<T>) jdRepository.findAll();
+			file = (Page<T>) jdRepository.findAll(pageable);
 		}
 		List<FileDTO<T>> fileDtos = file.getContent().stream().map(f -> {
 			String sharableUrl = getSharableUrl(f.getBlobName(), getContainerName(fileType));
