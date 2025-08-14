@@ -21,8 +21,8 @@ jobs:
       - name: Set up Java version
         uses: actions/setup-java@v4
         with:
-          java-version: "21"
-          distribution: "microsoft"
+          java-version: '21'
+          distribution: 'microsoft'
 
       - name: Build with Maven
         run: mvn clean install -DskipTests
@@ -31,23 +31,24 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: java-app
-          path: "${{ github.workspace }}/target/*.jar"
+          path: '${{ github.workspace }}/target/*.jar'
 
   deploy:
     runs-on: windows-latest
     needs: build
-
+    
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: java-app
-
+      
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: "resume-rag"
-          slot-name: "Production"
-          package: "*.jar"
+          app-name: 'resume-rag'
+          slot-name: 'Production'
+          package: '*.jar'
+
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_457C93C0C1BE4867A1182D6DCE130561 }}
