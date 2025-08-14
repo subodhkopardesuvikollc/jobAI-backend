@@ -17,15 +17,15 @@ import com.azure.search.documents.indexes.SearchIndexClientBuilder;
 @Configuration
 public class VectorStoreConfig {
 
-	@Bean
-	public SearchIndexClient searchIndexClient() {
+    @Bean
+    SearchIndexClient searchIndexClient() {
 		return new SearchIndexClientBuilder().endpoint(System.getenv("AZURE_URL"))
 				.credential(new AzureKeyCredential(System.getenv("AZURE_SEARCH_API_KEY"))).buildClient();
 	}
 
-	@Bean
-	@Primary
-	public VectorStore customVectorStore(SearchIndexClient searchIndexClient, EmbeddingModel embeddingModel) {
+    @Bean
+    @Primary
+    VectorStore customVectorStore(SearchIndexClient searchIndexClient, EmbeddingModel embeddingModel) {
 		return AzureVectorStore.builder(searchIndexClient, embeddingModel).initializeSchema(true)
 				.indexName(System.getenv("AZURE_INDEX_NAME"))
 				.filterMetadataFields(List.of(MetadataField.text("source_file"), MetadataField.text("section"),
