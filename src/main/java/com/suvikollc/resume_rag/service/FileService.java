@@ -20,6 +20,8 @@ public interface FileService {
 	public BlobClient getBlobClient(String blobName, String containerName);
 
 	public String extractContent(InputStream stream);
+	
+	public String extractContent(String blobName, String containerName);
 
 	public String extractContent(List<Document> documents);
 	
