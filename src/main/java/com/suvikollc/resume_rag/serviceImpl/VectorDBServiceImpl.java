@@ -70,7 +70,8 @@ public class VectorDBServiceImpl implements VectorDBService {
 				throw new RuntimeException("File not found: " + fileName);
 			}
 
-			InputStream fileInputStream = blobClient.openInputStream();
+			try(InputStream fileInputStream = blobClient.openInputStream()){
+				
 			var resource = new InputStreamResource(fileInputStream, fileName);
 			var tikaReader = new TikaDocumentReader(resource);
 			List<Document> documents = tikaReader.get();
@@ -97,6 +98,7 @@ public class VectorDBServiceImpl implements VectorDBService {
 
 			vectorStore.accept(chunkedDocuments);
 			log.info("Successfully upserted document: {}", fileName);
+			}
 
 		} catch (Exception e) {
 			log.error("Failed to ingest document: " + fileName, e);
