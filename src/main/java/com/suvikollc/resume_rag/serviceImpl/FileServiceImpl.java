@@ -290,4 +290,18 @@ public class FileServiceImpl implements FileService {
 		return null;
 	}
 
+	@Override
+	public String extractContent(String blobName, String containerName) {
+		var blobClient = getBlobClient(blobName, containerName);
+		if (blobClient.exists()) {
+			try (InputStream inputStream = blobClient.openInputStream()) {
+				return extractContent(inputStream);
+			} catch (Exception e) {
+				log.error("Failed to read content from blob: " + blobName, e);
+				throw new RuntimeException("Failed to read content from blob: " + e.getMessage());
+			}
+		}
+		throw new RuntimeException("Blob not found: " + blobName);
+	}
+
 }
