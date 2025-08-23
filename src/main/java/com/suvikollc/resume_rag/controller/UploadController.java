@@ -76,6 +76,16 @@ public class UploadController {
 		}
 
 	}
+	
+	@PostMapping("/uploadToVectorDB")
+	public ResponseEntity<?> uploadToVectorDB(@RequestParam String fileName) {
+		try {
+			vectorDBService.uploadToVectorDB(fileName);
+			return ResponseEntity.ok("File uploaded and processed successfully");
+		} catch (Exception e) {
+			return ResponseEntity.status(500).body("Failed to upload file: " + e.getMessage());
+		}
+	}
 
 	@GetMapping("/extract-sections")
 	public ResponseEntity<?> extractSections(@RequestParam String fileName) {
