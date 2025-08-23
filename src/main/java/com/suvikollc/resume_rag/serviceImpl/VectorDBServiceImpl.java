@@ -110,6 +110,7 @@ public class VectorDBServiceImpl implements VectorDBService {
 
 		} catch (Exception e) {
 			log.error("Failed to ingest document: " + resumeFileName, e);
+			resumeService.updatedResumeIndexStatus(resumeFileName, ResumeIndexStatus.FAILED);
 		}
 	}
 

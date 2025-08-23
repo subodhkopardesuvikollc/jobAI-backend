@@ -261,7 +261,7 @@ public class FileServiceImpl implements FileService {
 		documents.stream().forEach(doc -> {
 			contentBuilder.append(doc.getText());
 		});
-		return contentBuilder.toString();
+		return contentBuilder.toString().replace("\t", " ");
 	}
 
 	private String getEmailId(InputStream inputStream) {
