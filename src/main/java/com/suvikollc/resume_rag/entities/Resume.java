@@ -20,8 +20,13 @@ import lombok.Setter;
 @Document(collection = "resumes")
 public class Resume extends File {
 	
+	public enum ResumeIndexStatus {
+		NOT_INDEXED, INDEXING, INDEXED, FAILED
+	}
+	
 	private String emailId;
 	private List<EmailDTO> reachOutEmails;
+	private ResumeIndexStatus indexStatus = ResumeIndexStatus.NOT_INDEXED;
 
 	public Resume(ObjectId id, String fileName, String blobName, LocalDateTime createdAt, LocalDateTime updatedAt) {
 		super(id, fileName, blobName, createdAt, updatedAt);

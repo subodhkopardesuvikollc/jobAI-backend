@@ -23,8 +23,10 @@ import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.models.BlobItem;
 import com.suvikollc.resume_rag.dto.ResumeResultsDto;
 import com.suvikollc.resume_rag.dto.SearchResultsDto;
+import com.suvikollc.resume_rag.entities.Resume.ResumeIndexStatus;
 import com.suvikollc.resume_rag.service.FileService;
 import com.suvikollc.resume_rag.service.ResumeChunkingService;
+import com.suvikollc.resume_rag.service.ResumeService;
 import com.suvikollc.resume_rag.service.VectorDBService;
 
 @Service
@@ -46,6 +48,9 @@ public class VectorDBServiceImpl implements VectorDBService {
 
 	@Autowired
 	private FileService fileService;
+	
+	@Autowired
+	private ResumeService resumeService;
 
 	@Autowired
 	@Qualifier("agenticChunkingImpl")
@@ -57,51 +62,54 @@ public class VectorDBServiceImpl implements VectorDBService {
 
 	@Value("${azure.storage.jd.container.name}")
 	private String jdContainerName;
-	
-	private static final int CHARACTER_THRESHOLD = 7500;
 
-	public void uploadToVectorDB(String fileName) {
-		log.info("Processing document from file share: {}", fileName);
+	private static final int CHARACTER_THRESHOLD = 40000;
+
+	public void uploadToVectorDB(String resumeFileName) {
+		log.info("Processing document from file share: {}", resumeFileName);
 		try {
-
-			var blobClient = fileService.getBlobClient(fileName, resumeContainerName);
+			
+			resumeService.updatedResumeIndexStatus(resumeFileName, ResumeIndexStatus.INDEXING);
+			
+			var blobClient = fileService.getBlobClient(resumeFileName, resumeContainerName);
 			if (!blobClient.exists()) {
-				log.error("File not found: {}", fileName);
-				throw new RuntimeException("File not found: " + fileName);
+				log.error("File not found: {}", resumeFileName);
+				throw new RuntimeException("File not found: " + resumeFileName);
 			}
 
-			try(InputStream fileInputStream = blobClient.openInputStream()){
-				
-			var resource = new InputStreamResource(fileInputStream, fileName);
-			var tikaReader = new TikaDocumentReader(resource);
-			List<Document> documents = tikaReader.get();
+			try (InputStream fileInputStream = blobClient.openInputStream()) {
 
-			String resumeContent = fileService.extractContent(documents);
-			List<Document> chunkedDocuments;
+				var resource = new InputStreamResource(fileInputStream, resumeFileName);
+				var tikaReader = new TikaDocumentReader(resource);
+				List<Document> documents = tikaReader.get();
+
+				String resumeContent = fileService.extractContent(documents);
+				List<Document> chunkedDocuments;
 			if (resumeContent.length() < CHARACTER_THRESHOLD) {
-				chunkedDocuments = agenticChunkingService.chunkResume(resumeContent, fileName);
+				chunkedDocuments = agenticChunkingService.chunkResume(resumeContent, resumeFileName);
 			} else {
-				chunkedDocuments = sectionBasedChunkingImpl.chunkResume(resumeContent, fileName);
+				chunkedDocuments = sectionBasedChunkingImpl.chunkResume(resumeContent, resumeFileName);
 			}
 
-			log.info("Split document {} into {} chunks.", fileName, chunkedDocuments.size());
+				log.info("Split document {} into {} chunks.", resumeFileName, chunkedDocuments.size());
 
-			for (int i = 0; i < chunkedDocuments.size(); i++) {
-				Document chunk = chunkedDocuments.get(i);
-				String uniqueId = fileName + "-chunk-" + i;
-				chunk.getMetadata().put("id", uniqueId);
-				String sectionName = (String) chunk.getMetadata().get("section");
-				chunk.getMetadata().put("section", sectionName.toLowerCase());
+				for (int i = 0; i < chunkedDocuments.size(); i++) {
+					Document chunk = chunkedDocuments.get(i);
+					String uniqueId = resumeFileName + "-chunk-" + i;
+					chunk.getMetadata().put("id", uniqueId);
+					String sectionName = (String) chunk.getMetadata().get("section");
+					chunk.getMetadata().put("section", sectionName.toLowerCase());
 
-				chunk.getMetadata().put("source_file", fileName);
-			}
+					chunk.getMetadata().put("source_file", resumeFileName);
+				}
 
-			vectorStore.accept(chunkedDocuments);
-			log.info("Successfully upserted document: {}", fileName);
+				vectorStore.accept(chunkedDocuments);
+				log.info("Successfully upserted document: {}", resumeFileName);
+				resumeService.updatedResumeIndexStatus(resumeFileName, ResumeIndexStatus.INDEXED);
 			}
 
 		} catch (Exception e) {
-			log.error("Failed to ingest document: " + fileName, e);
+			log.error("Failed to ingest document: " + resumeFileName, e);
 		}
 	}
 
