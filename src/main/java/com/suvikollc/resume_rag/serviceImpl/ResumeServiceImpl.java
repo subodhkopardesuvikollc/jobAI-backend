@@ -15,17 +15,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.suvikollc.resume_rag.entities.Resume.ResumeIndexStatus;
+import com.suvikollc.resume_rag.repository.ResumeRepository;
 import com.suvikollc.resume_rag.dto.ResumeAnalysisResponseDTO;
 import com.suvikollc.resume_rag.service.FileService;
 import com.suvikollc.resume_rag.service.ResumeService;
 
 @Service
 public class ResumeServiceImpl implements ResumeService {
-	
+
 	Logger log = LoggerFactory.getLogger(ResumeServiceImpl.class);
 
 	@Autowired
 	private VectorStore vectorStore;
+
+	@Autowired
+	private ResumeRepository resumeRepository;
 
 	@Autowired
 	private ChatClient chatClient;
@@ -64,6 +69,29 @@ public class ResumeServiceImpl implements ResumeService {
 		}
 	}
 
+	public boolean isResumeIndexed(String resumeBlobName) {
+		var resume = resumeRepository.findByFileName(resumeBlobName);
+		if (resume != null && resume.getIndexStatus() == ResumeIndexStatus.INDEXED) {
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public void updatedResumeIndexStatus(String resumeBlobName, ResumeIndexStatus status) {
+
+		var resume = resumeRepository.findByFileName(resumeBlobName);
+
+		if (resume == null) {
+			throw new RuntimeException("Resume not found with blob name: " + resumeBlobName);
+		}
+		if (resume.getIndexStatus() != status) {
+			resume.setIndexStatus(status);
+			resumeRepository.save(resume);
+			log.info("Updated resume index status to {} for blob name: {}", status, resumeBlobName);
+		}
+	}
+
 	@Override
 	public ResumeAnalysisResponseDTO analyzeResume(String resumeBlobName, String jdBlobName) {
 
@@ -99,18 +127,20 @@ public class ResumeServiceImpl implements ResumeService {
 		String jdContent = fileService.extractContent(jdBlobName, jdContainerName);
 
 		try {
-	        var outputParser = new BeanOutputConverter<>(ResumeAnalysisResponseDTO.class);
-	        String format = outputParser.getFormat();
-	        String systemMessage = SYSTEM_PROMPT_TEMPLATE.replace("{format}", format);
-	        String userMessage = USER_PROMPT_TEMPLATE.replace("{jobDescription}", jdContent).replace("{resumeText}", resumeContent);
+			var outputParser = new BeanOutputConverter<>(ResumeAnalysisResponseDTO.class);
+			String format = outputParser.getFormat();
+			String systemMessage = SYSTEM_PROMPT_TEMPLATE.replace("{format}", format);
+			String userMessage = USER_PROMPT_TEMPLATE.replace("{jobDescription}", jdContent).replace("{resumeText}",
+					resumeContent);
 
-	        log.info("Analyzing resume: {} of length {} characters, against JD: {} of length {} characters", resumeBlobName, resumeContent.length(), jdBlobName, jdContent.length());
-	        
-	       return chatClient.prompt().system(systemMessage).user(userMessage).call()
-	                .entity(ResumeAnalysisResponseDTO.class);
-	    } catch (Exception e) {
-	        throw new RuntimeException("Failed to analyze resume: " + e.getMessage());
-	    }
+			log.info("Analyzing resume: {} of length {} characters, against JD: {} of length {} characters",
+					resumeBlobName, resumeContent.length(), jdBlobName, jdContent.length());
+
+			return chatClient.prompt().system(systemMessage).user(userMessage).call()
+					.entity(ResumeAnalysisResponseDTO.class);
+		} catch (Exception e) {
+			throw new RuntimeException("Failed to analyze resume: " + e.getMessage());
+		}
 
 	}
 
