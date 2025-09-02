@@ -21,6 +21,7 @@ import com.suvikollc.resume_rag.dto.ResumeAnalysisResponseDTO;
 import com.suvikollc.resume_rag.service.FileService;
 import com.suvikollc.resume_rag.service.ResumeService;
 
+@Service
 public class ResumeServiceImpl implements ResumeService {
 
 	Logger log = LoggerFactory.getLogger(ResumeServiceImpl.class);
