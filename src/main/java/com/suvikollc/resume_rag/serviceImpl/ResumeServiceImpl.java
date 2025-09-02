@@ -51,6 +51,13 @@ public class ResumeServiceImpl implements ResumeService {
 		}
 	}
 
+	public boolean isResumeIndexed(String resumeBlobName) {
+		var resume = resumeRepository.findByFileName(resumeBlobName);
+		if(resume != null && resume.getIndexStatus() == ResumeIndexStatus.INDEXED) {
+			return true;
+		}
+		return false;
+	}
 	@Override
 	public void updatedResumeIndexStatus(String resumeBlobName, ResumeIndexStatus status) {
 		

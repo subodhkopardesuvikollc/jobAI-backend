@@ -1,5 +1,6 @@
 package com.suvikollc.resume_rag.serviceImpl;
 
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -48,7 +49,7 @@ public class VectorDBServiceImpl implements VectorDBService {
 
 	@Autowired
 	private FileService fileService;
-	
+
 	@Autowired
 	private ResumeService resumeService;
 
@@ -68,13 +69,18 @@ public class VectorDBServiceImpl implements VectorDBService {
 	public void uploadToVectorDB(String resumeFileName) {
 		log.info("Processing document from file share: {}", resumeFileName);
 		try {
-			
+
+			if (resumeService.isResumeIndexed(resumeFileName)) {
+				log.info("Resume {} is already indexed. Skipping ingestion.", resumeFileName);
+				return;
+			}
+
 			resumeService.updatedResumeIndexStatus(resumeFileName, ResumeIndexStatus.INDEXING);
-			
+
 			var blobClient = fileService.getBlobClient(resumeFileName, resumeContainerName);
 			if (!blobClient.exists()) {
 				log.error("File not found: {}", resumeFileName);
-				throw new RuntimeException("File not found: " + resumeFileName);
+				throw new FileNotFoundException("File not found: " + resumeFileName);
 			}
 
 			try (InputStream fileInputStream = blobClient.openInputStream()) {
@@ -85,11 +91,11 @@ public class VectorDBServiceImpl implements VectorDBService {
 
 				String resumeContent = fileService.extractContent(documents);
 				List<Document> chunkedDocuments;
-			if (resumeContent.length() < CHARACTER_THRESHOLD) {
-				chunkedDocuments = agenticChunkingService.chunkResume(resumeContent, resumeFileName);
-			} else {
-				chunkedDocuments = sectionBasedChunkingImpl.chunkResume(resumeContent, resumeFileName);
-			}
+				if (resumeContent.length() < CHARACTER_THRESHOLD) {
+					chunkedDocuments = agenticChunkingService.chunkResume(resumeContent, resumeFileName);
+				} else {
+					chunkedDocuments = sectionBasedChunkingImpl.chunkResume(resumeContent, resumeFileName);
+				}
 
 				log.info("Split document {} into {} chunks.", resumeFileName, chunkedDocuments.size());
 
@@ -108,7 +114,12 @@ public class VectorDBServiceImpl implements VectorDBService {
 				resumeService.updatedResumeIndexStatus(resumeFileName, ResumeIndexStatus.INDEXED);
 			}
 
-		} catch (Exception e) {
+		} catch (FileNotFoundException fnfEx) {
+			resumeService.updatedResumeIndexStatus(resumeFileName, ResumeIndexStatus.FAILED);
+			throw new RuntimeException("File not found: " + resumeFileName, fnfEx);
+		}
+
+		catch (Exception e) {
 			log.error("Failed to ingest document: " + resumeFileName, e);
 			resumeService.updatedResumeIndexStatus(resumeFileName, ResumeIndexStatus.FAILED);
 		}
