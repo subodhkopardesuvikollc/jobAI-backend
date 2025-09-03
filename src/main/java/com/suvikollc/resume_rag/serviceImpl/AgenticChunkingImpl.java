@@ -25,27 +25,27 @@ public class AgenticChunkingImpl implements ResumeChunkingService {
 	private ChatClient chatClient;
 
 	private static final String SYSTEM_PROMPT = """
-			You are an expert HR document parser. Your task is to analyze the following resume text and deconstruct it into a structured JSON array.
-			Each object in the array must represent a single, logically complete chunk of information.
+			You are an expert HR document parser. Your task is to analyze the following resume text and deconstruct it into a structured JSON array of objects, where each object is a chunk.
 
 			The required JSON format for each chunk is: {"type": "...", "content": "..."}
 
-			Possible 'type' values are:
-			- "contact_info": A block containing email, phone, address, and profile links (LinkedIn, GitHub).
-			- "summary": The professional summary or objective statement.
-			- "skills": A self-contained block listing technical or soft skills.
-			- "experience": A single, complete work experience entry. It MUST include company, title, dates, and all related responsibilities/achievements for that specific role.
-			- "education": A single, combined block containing ALL educational qualifications from the resume.
-			- "project": A single project description.
-			- "certification": A single certification, license, or credential.
-			- "publication": A single published work.
+			## Core Directives and Constraints
+			1.  Ensure the 'content' for each chunk is the original, unmodified text from the resume.
+			2.  **Experience & Project Allocation:** You have a maximum budget of **15 chunks** for 'experience' and 'project' types combined. Your primary goal is to preserve each individual job experience and project as a separate chunk within this limit.
+			3.  **Targeted Merging for Priority Sections:** If, and only if, the total count of individual 'experience' and 'project' entries exceeds 15, you MUST merge the chronologically oldest or least detailed entries to fit within the 15-chunk budget. Do not merge recent, detailed roles unless absolutely necessary.
+			4.  **Aggressive Consolidation for Other Sections:** For all other types, you must be aggressive in consolidation. Always aim to create only ONE chunk for each of the following types: 'skills', 'education', 'certification', 'publication'. The 'contact_info' and 'summary' should also each be a single chunk.
+			5.  **Output Format:** Return ONLY the raw JSON array. Do not include any explanations, comments, or markdown code fences.
 
-			 Rules:
-			 1.  Ensure the 'content' for each chunk is the original, unmodified text from the resume.
-			 2.  Combine all distinct educational entries (degrees, diplomas) into one 'education' chunk.
-			 3.  Discard any miscellaneous sections that do not fit the categories above (e.g., hobbies, references). Do not create a chunk with the type "other".
-			 4.  Return ONLY the raw JSON array, with no surrounding text, explanations, or markdown code fences.
-			 """;
+			## Possible 'type' values for JSON:
+			- "contact_info": Contains email, phone, address, and profile links.
+			- "summary": The professional summary or objective statement.
+			- "skills": A single, combined block of ALL technical and soft skills.
+			- "experience": A single, complete work experience entry OR a merged block of older experiences.
+			- "education": A single, combined block containing ALL educational qualifications.
+			- "project": A single project description.
+			- "certification": A single, combined block of ALL certifications.
+			- "publication": A single, combined block of ALL publications.
+			""";
 
 	@Override
 	public List<Document> chunkResume(String resumeContent, String resumeFileName) {
