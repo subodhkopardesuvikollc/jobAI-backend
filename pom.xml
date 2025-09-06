@@ -121,6 +121,11 @@
 		</dependency>
 
 		<dependency>
+			<groupId>com.azure</groupId>
+			<artifactId>azure-communication-callautomation</artifactId>
+		</dependency>
+
+		<dependency>
 			<groupId>com.azure.spring</groupId>
 			<artifactId>spring-messaging-azure-storage-queue</artifactId>
 		</dependency>

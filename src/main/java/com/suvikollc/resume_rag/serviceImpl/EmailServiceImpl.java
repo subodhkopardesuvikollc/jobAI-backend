@@ -49,7 +49,7 @@ public class EmailServiceImpl implements EmailService {
 	@Value("${azure.communication.email.sender-address}")
 	private String senderAddress;
 
-	@Value("${azure.communication.email.connection-string}")
+	@Value("${azure.communication.connection-string}")
 	private String connectionString;
 
 	@Override
