@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -41,13 +40,9 @@ public class CommunicationController {
 		return ResponseEntity.ok("Call started successfully");
 	}
 
-	@PostMapping("/callback")
-	public ResponseEntity<String> handleCallback(@RequestBody(required = false) String payload,
-			@RequestHeader(value = "Acs-Callback-Validation", required = false) String validationToken) {
-		if (validationToken != null) {
-			// Respond with the validation token as plain text
-			return ResponseEntity.ok(validationToken);
-		}
+	@PostMapping("/call/callback")
+	public ResponseEntity<String> handleCallback(@RequestBody(required = false) String payload) {
+
 		// Normal event handling
 		System.out.println("Received ACS callback: " + payload);
 		return ResponseEntity.ok().build();

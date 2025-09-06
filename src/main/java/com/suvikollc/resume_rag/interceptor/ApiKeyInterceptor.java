@@ -18,7 +18,7 @@ public class ApiKeyInterceptor implements HandlerInterceptor {
 			throws Exception {
 
 		String apiKey = request.getHeader("x-api-key");
-		if (VALID_API_KEY.equals(apiKey) || request.getRequestURI().contains("/callback")) {
+		if (VALID_API_KEY.equals(apiKey) || request.getRequestURI().contains("/communication/call/")) {
 			return true;
 		} else {
 			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
