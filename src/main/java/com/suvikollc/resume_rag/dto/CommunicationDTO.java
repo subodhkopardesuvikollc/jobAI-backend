@@ -13,6 +13,7 @@ public class CommunicationDTO {
 	
 	public enum CommunicationType {
 	    EMAIL("email-queue"),
+	    PHONE("phone-queue"),
 	    SMS("sms-queue"),
 	    PUSH("push-queue");
 	    
