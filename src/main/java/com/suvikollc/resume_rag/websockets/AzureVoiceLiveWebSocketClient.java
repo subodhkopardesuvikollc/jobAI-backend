@@ -1,4 +1,4 @@
-package com.suvikollc.resume_rag.serviceImpl;
+package com.suvikollc.resume_rag.websockets;
 
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;

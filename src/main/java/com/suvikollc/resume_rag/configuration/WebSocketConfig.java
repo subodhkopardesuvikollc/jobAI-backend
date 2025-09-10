@@ -6,7 +6,7 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
-import com.suvikollc.resume_rag.serviceImpl.AcsMediaWebSocketHandler;
+import com.suvikollc.resume_rag.websockets.AcsMediaWebSocketHandler;
 
 @Configuration
 @EnableWebSocket
