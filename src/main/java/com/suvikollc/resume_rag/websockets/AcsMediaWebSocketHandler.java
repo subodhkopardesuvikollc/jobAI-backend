@@ -16,6 +16,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 @Component
 public class AcsMediaWebSocketHandler extends TextWebSocketHandler {
 	private WebSocketSession acsSession;
+	
+	@Autowired
+	private ACSSessionManager acsSessionManager;
 
 	@Autowired
 	private AzureVoiceLiveWebSocketClient webSocketClient;
@@ -25,7 +28,7 @@ public class AcsMediaWebSocketHandler extends TextWebSocketHandler {
 
 	@Override
 	public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-		this.acsSession = session;
+		acsSessionManager.setSession(session);
 		webSocketClient.connect().thenRun(() -> {
 			log.info("Connected to Azure OpenAI WebSocket");
 		}).exceptionally(ex -> {

@@ -30,8 +30,8 @@ public class CallServiceImpl implements CallService {
 	@Autowired
 	private CallAutomationClient callAutomationClient;
 
-	private String CALLBACK_HOST = "https://large-rice-trade.loca.lt";
-	private String TRANSPORT_HOST = "wss://large-rice-trade.loca.lt";
+	private String CALLBACK_HOST = "https://thin-mails-shake.loca.lt";
+	private String TRANSPORT_HOST = "wss://thin-mails-shake.loca.lt";
 
 	@Value("${azure.communication.from-phone-number}")
 	private String FROM_PHONE_NUMBER;
@@ -46,7 +46,7 @@ public class CallServiceImpl implements CallService {
 
 		MediaStreamingOptions mediaOptions = new MediaStreamingOptions(MediaStreamingAudioChannel.MIXED,
 				StreamingTransport.WEBSOCKET).setTransportUrl(TRANSPORT_URL).setEnableBidirectional(true)
-				.setStartMediaStreaming(true).setAudioFormat(AudioFormat.PCM_16K_MONO);
+				.setStartMediaStreaming(true).setAudioFormat(AudioFormat.PCM_24K_MONO);
 
 		CreateCallOptions options = new CreateCallOptions(invite, CALLBACK_URI).setMediaStreamingOptions(mediaOptions);
 		Response<CreateCallResult> result = callAutomationClient.createCallWithResponse(options, Context.NONE);

@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -18,6 +19,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public class AzureVoiceLiveWebSocketHandler extends TextWebSocketHandler {
 
 	Logger logger = LoggerFactory.getLogger(AzureVoiceLiveWebSocketHandler.class);
+
+	@Autowired
+	private ACSSessionManager acsSessionManager;
 
 	private ObjectMapper objectMapper = new ObjectMapper();
 
@@ -61,7 +65,9 @@ public class AzureVoiceLiveWebSocketHandler extends TextWebSocketHandler {
 			+ "\r\n"
 			+ "Use only standard English alphabet characters. along with basic punctuation. along with basic punctuation. Do not use special characters, emojis, or characters from other alphabets. Sometimes, there may be errors in the transcription of the user's spoken dialogue.\r\n"
 			+ "\r\n"
-			+ "Words indicate uncertainty, so treat these as phonetic hints. Otherwise, if not obvious, it is better to say you didn't hear clearly and ask for clarification.";
+			+ "Words indicate uncertainty, so treat these as phonetic hints. Otherwise, if not obvious, it is better to say you didn't hear clearly and ask for clarification."
+			+ "\r\n"
+			+"Start by introducing yourself as an interviewer and ask the user questions about their resume and experience. ";
 
 	@Override
 	public void afterConnectionEstablished(WebSocketSession session) {
@@ -83,10 +89,19 @@ public class AzureVoiceLiveWebSocketHandler extends TextWebSocketHandler {
 
 			String payload = message.getPayload();
 			JsonNode json = objectMapper.readTree(payload);
-			logger.info("Received message: {}", payload);
+			if (acsSessionManager.getAcsSession().get() == null) {
+				logger.warn("ACS session is null, cannot forward audio.");
+				return;
+			}
 			if ("response.audio.delta".equals(json.get("type").asText())) {
+				ObjectNode audioNode = objectMapper.createObjectNode();
+				audioNode.put("kind", "AudioData");
+				ObjectNode audioData = audioNode.putObject("audioData");
+				audioData.put("data", json.get("delta").asText());
+				acsSessionManager.getAcsSession().get()
+						.sendMessage(new TextMessage(objectMapper.writeValueAsString(audioNode)));
+				logger.info("Forwarded audio delta to ACS Media Service.");
 
-				logger.info("Received audio delta message of size: {}", payload.length());
 			}
 
 		} catch (Exception e) {
@@ -106,7 +121,7 @@ public class AzureVoiceLiveWebSocketHandler extends TextWebSocketHandler {
 		ObjectNode session = rootNode.putObject("session");
 
 		ObjectNode voice = session.putObject("voice");
-		voice.put("name", "en-US-Ava:DragonHDLatestNeural");
+		voice.put("name", "en-US-Emma:DragonHDLatestNeural");
 		voice.put("type", "azure-standard");
 		voice.put("temperature", 0.8);
 
