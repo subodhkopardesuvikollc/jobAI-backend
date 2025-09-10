@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.suvikollc.resume_rag.dto.CommunicationDTO;
+import com.suvikollc.resume_rag.dto.CommunicationDTO.CommunicationType;
 import com.suvikollc.resume_rag.dto.EmailDTO;
 import com.suvikollc.resume_rag.service.EmailService;
 
@@ -38,8 +39,8 @@ public class EmailConsumer {
 	@PostConstruct
 	public void init() {
 
-		this.emailQueueClient = new QueueClientBuilder().connectionString(connectionString).queueName("email-queue")
-				.buildClient();
+		this.emailQueueClient = new QueueClientBuilder().connectionString(connectionString)
+				.queueName(CommunicationType.EMAIL.getQueueName()).buildClient();
 		this.objectMapper = new ObjectMapper().findAndRegisterModules()
 				.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 				.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false).registerModule(new JavaTimeModule());

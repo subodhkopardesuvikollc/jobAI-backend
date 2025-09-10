@@ -66,12 +66,8 @@ public class FileServiceImpl implements FileService {
 
 			byte[] fileBytes = inputStream.readAllBytes();
 
-			var emailId = getEmailId(new ByteArrayInputStream(fileBytes));
-
 			var savedFile = createFileInstance(fileType, file.getOriginalFilename(), blobName);
-			if (savedFile instanceof Resume) {
-				((Resume) savedFile).setEmailId(emailId);
-			}
+		
 			savedFile = saveFile(savedFile);
 
 			blobClient.upload(new ByteArrayInputStream(fileBytes), file.getSize(), true);
@@ -264,20 +260,7 @@ public class FileServiceImpl implements FileService {
 		return contentBuilder.toString().replace("\t", " ");
 	}
 
-	private String getEmailId(InputStream inputStream) {
-		String content = extractContent(inputStream);
 
-		String emailRegex = "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b";
-
-		Pattern pattern = Pattern.compile(emailRegex);
-		var matcher = pattern.matcher(content);
-		if (matcher.find()) {
-			return matcher.group();
-		} else {
-			log.warn("No email found in the content");
-			return null;
-		}
-	}
 
 	@SuppressWarnings("unchecked")
 	@Override

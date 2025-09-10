@@ -15,9 +15,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.suvikollc.resume_rag.dto.ResumeAnalysisResponseDTO;
 import com.suvikollc.resume_rag.entities.Resume.ResumeIndexStatus;
 import com.suvikollc.resume_rag.repository.ResumeRepository;
-import com.suvikollc.resume_rag.dto.ResumeAnalysisResponseDTO;
+import com.suvikollc.resume_rag.service.ContactParserService;
 import com.suvikollc.resume_rag.service.FileService;
 import com.suvikollc.resume_rag.service.ResumeService;
 
@@ -25,6 +26,9 @@ import com.suvikollc.resume_rag.service.ResumeService;
 public class ResumeServiceImpl implements ResumeService {
 
 	Logger log = LoggerFactory.getLogger(ResumeServiceImpl.class);
+
+	@Autowired
+	private ContactParserService contactParserService;
 
 	@Autowired
 	private VectorStore vectorStore;
@@ -141,6 +145,65 @@ public class ResumeServiceImpl implements ResumeService {
 		} catch (Exception e) {
 			throw new RuntimeException("Failed to analyze resume: " + e.getMessage());
 		}
+
+	}
+
+	@Override
+	public String getEmailId(String resumeBlobName) {
+		var resume = resumeRepository.findByFileName(resumeBlobName);
+		if (resume == null) {
+			throw new RuntimeException("Resume not found with blob name: " + resumeBlobName);
+		}
+		if (resume.getEmailId() != null && !resume.getEmailId().isEmpty()) {
+			return resume.getEmailId();
+		}
+		String content = fileService.extractContent(resumeBlobName, resumeContainerName);
+		String email = contactParserService.extractEmail(content);
+		if (email == null || email.isEmpty()) {
+			return null;
+		}
+		resume.setEmailId(email);
+		resumeRepository.save(resume);
+
+		return email;
+
+	}
+
+	@Override
+	public String getPhoneNo(String resumeBlobName) {
+		var resume = resumeRepository.findByFileName(resumeBlobName);
+		if (resume == null) {
+			throw new RuntimeException("Resume not found with blob name: " + resumeBlobName);
+		}
+		if (resume.getPhoneNo() != null && !resume.getPhoneNo().isEmpty()) {
+			return resume.getPhoneNo();
+		}
+		String content = fileService.extractContent(resumeBlobName, resumeContainerName);
+		String phoneNo = contactParserService.extractPhoneNo(content);
+		if (phoneNo == null || phoneNo.isEmpty()) {
+			return null;
+		}
+		resume.setPhoneNo(phoneNo);
+		resumeRepository.save(resume);
+
+		return phoneNo;
+	}
+
+	@Override
+	public void updateResumeContactInfo(String resumeBlobName, String contactInfo) {
+
+		var resume = resumeRepository.findByFileName(resumeBlobName);
+		if (resume == null) {
+			throw new RuntimeException("Resume not found with blob name: " + resumeBlobName);
+		}
+		String content = fileService.extractContent(resumeBlobName, resumeContainerName);
+		var contactInfoDTO = contactParserService.extractContactInfo(content);
+
+		if (contactInfoDTO != null) {
+			resume.setEmailId(contactInfoDTO.email());
+			resume.setPhoneNo(contactInfoDTO.phoneNumber());
+		}
+		resumeRepository.save(resume);
 
 	}
 

@@ -25,6 +25,7 @@ public class Resume extends File {
 	}
 	
 	private String emailId;
+	private String phoneNo;
 	private List<EmailDTO> reachOutEmails;
 	private ResumeIndexStatus indexStatus = ResumeIndexStatus.NOT_INDEXED;
 

@@ -97,6 +97,15 @@ public class VectorDBServiceImpl implements VectorDBService {
 					chunkedDocuments = sectionBasedChunkingImpl.chunkResume(resumeContent, resumeFileName);
 				}
 
+				var contactDocument = chunkedDocuments.stream()
+						.filter(doc -> "contact_info".equalsIgnoreCase((String) doc.getMetadata().get("section")))
+						.findFirst();
+				if (contactDocument.isEmpty()) {
+					log.warn("No contact_info section found in resume: {}", resumeFileName);
+				} else {
+					resumeService.updateResumeContactInfo(resumeFileName, contactDocument.get().getText());
+				}
+
 				log.info("Split document {} into {} chunks.", resumeFileName, chunkedDocuments.size());
 
 				for (int i = 0; i < chunkedDocuments.size(); i++) {
