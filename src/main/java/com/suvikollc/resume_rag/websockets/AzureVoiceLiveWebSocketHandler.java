@@ -1,7 +1,9 @@
 package com.suvikollc.resume_rag.websockets;
 
 import java.io.IOException;
+import java.util.Set;
 
+import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +16,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.suvikollc.resume_rag.dto.CallContent;
+import com.suvikollc.resume_rag.dto.CommunicationDTO.CommunicationType;
+import com.suvikollc.resume_rag.entities.Communication;
+import com.suvikollc.resume_rag.repository.CommunicationRepository;
 
 @Component
 public class AzureVoiceLiveWebSocketHandler extends TextWebSocketHandler {
@@ -23,7 +29,19 @@ public class AzureVoiceLiveWebSocketHandler extends TextWebSocketHandler {
 	@Autowired
 	private ACSSessionManager acsSessionManager;
 
+	@Autowired
+	private CallControlManager callControlManager;
+
+	@Autowired
+	private CommunicationRepository communicationRepository;
+
 	private ObjectMapper objectMapper = new ObjectMapper();
+
+	private CallContent currentCallLog;
+	private Communication currentCommunication;
+
+	private StringBuilder candidateBufferText = new StringBuilder();
+	private StringBuilder modelBufferText = new StringBuilder();
 
 	private String SYSTEM_PROMPT = "You are Zara, a human-like AI character developed by Contoso Company in 2025.\r\n"
 			+ "    \r\n"
@@ -67,13 +85,28 @@ public class AzureVoiceLiveWebSocketHandler extends TextWebSocketHandler {
 			+ "\r\n"
 			+ "Words indicate uncertainty, so treat these as phonetic hints. Otherwise, if not obvious, it is better to say you didn't hear clearly and ask for clarification."
 			+ "\r\n"
-			+"Start by introducing yourself as an interviewer and ask the user questions about their resume and experience. ";
+			+ "Start by introducing yourself as an interviewer and ask the user questions about their resume and experience. ";
+
+	private Set<String> VOICEMAIL_KEYWORDS = Set.of("not available", "the tone", "voicemail", "record your message",
+			"hang up", "press the", "leave your name and number", "has been forwarded", "leave a message",
+			"call me back", "call me later", "busy right now", "can't talk right now");
 
 	@Override
 	public void afterConnectionEstablished(WebSocketSession session) {
 		logger.info("WebSocket connection established with OpenAI");
 
+		this.currentCallLog = new CallContent();
+		this.currentCommunication = new Communication();
+
 		String startMessage = buildSessionUpdateJsonString();
+		var currentAcsSession = acsSessionManager.getAcsSession().get();
+		if (currentAcsSession == null) {
+			logger.error("ACS session is null, cannot proceed.");
+			return;
+		}
+		String resumeId = (String) currentAcsSession.getAttributes().get("resumeId");
+		currentCommunication.setResumeId(new ObjectId(resumeId));
+		currentCommunication.setType(CommunicationType.PHONE);
 		try {
 			session.sendMessage(new TextMessage(startMessage));
 		} catch (IOException e) {
@@ -93,15 +126,38 @@ public class AzureVoiceLiveWebSocketHandler extends TextWebSocketHandler {
 				logger.warn("ACS session is null, cannot forward audio.");
 				return;
 			}
-			if ("response.audio.delta".equals(json.get("type").asText())) {
+			String eventType = json.get("type").asText();
+			if ("conversation.item.input_audio_transcription.completed".equals(eventType)) {
+				candidateBufferText.append(json.get("transcript").asText().toLowerCase()).append(" ");
+				checkForVoicemail();
+			}
+
+			if ("response.audio_transcript.delta".equals(eventType)) {
+				if (candidateBufferText.length() > 0) {
+					currentCallLog.addUtterence("candidate", candidateBufferText.toString().trim());
+					logger.info("Candidate : {}", candidateBufferText.toString().trim());
+					candidateBufferText.setLength(0);
+				}
+				modelBufferText.append(json.get("delta").asText());
+			}
+			if ("response.audio_transcript.done".equals(eventType)) {
+				if (modelBufferText.length() > 0) {
+					currentCallLog.addUtterence("model", modelBufferText.toString().trim());
+					logger.info("Model : {}", modelBufferText.toString().trim());
+					modelBufferText.setLength(0);
+				}
+			}
+			if ("response.audio.delta".equals(eventType)) {
 				ObjectNode audioNode = objectMapper.createObjectNode();
 				audioNode.put("kind", "AudioData");
 				ObjectNode audioData = audioNode.putObject("audioData");
 				audioData.put("data", json.get("delta").asText());
 				acsSessionManager.getAcsSession().get()
 						.sendMessage(new TextMessage(objectMapper.writeValueAsString(audioNode)));
-				logger.info("Forwarded audio delta to ACS Media Service.");
 
+			}
+			if ("response.audio.done".equals(eventType)) {
+				logger.info("Response sent to ACS.");
 			}
 
 		} catch (Exception e) {
@@ -109,9 +165,37 @@ public class AzureVoiceLiveWebSocketHandler extends TextWebSocketHandler {
 		}
 	}
 
+	private void checkForVoicemail() {
+
+		if (currentCallLog.getUtterences().isEmpty()) {
+			logger.info("Checking for voicemail keywords in candidate text: {}", candidateBufferText.toString());
+			String currentText = candidateBufferText.toString();
+			for (String keyword : VOICEMAIL_KEYWORDS) {
+				if (currentText.contains(keyword)) {
+					logger.info("Voicemail keyword detected: {}", keyword);
+					callControlManager.hangupCall();
+					break;
+				}
+			}
+		}
+	}
+
 	@Override
 	public void handleTransportError(WebSocketSession session, Throwable exception) {
 		logger.error("Transport error in OpenAI WebSocket: {}", exception.getMessage());
+	}
+
+	@Override
+	public void afterConnectionClosed(WebSocketSession session, org.springframework.web.socket.CloseStatus status) {
+		logger.info("WebSocket connection closed with OpenAI: {}. Saving final transcript.", status);
+		if (currentCallLog != null && !currentCallLog.getUtterences().isEmpty()) {
+			currentCommunication.setContent(currentCallLog);
+			communicationRepository.save(currentCommunication);
+			logger.info("Saved communication log for resumeId: {}", currentCommunication.getResumeId());
+		} else {
+			logger.warn("No call log to save or missing resumeId.");
+		}
+
 	}
 
 	private String buildSessionUpdateJsonString() {
@@ -124,6 +208,9 @@ public class AzureVoiceLiveWebSocketHandler extends TextWebSocketHandler {
 		voice.put("name", "en-US-Emma:DragonHDLatestNeural");
 		voice.put("type", "azure-standard");
 		voice.put("temperature", 0.8);
+
+		ObjectNode input_audio = session.putObject("input_audio_transcription");
+		input_audio.put("model", "gpt-4o-mini-transcribe");
 
 		session.put("instructions", SYSTEM_PROMPT);
 

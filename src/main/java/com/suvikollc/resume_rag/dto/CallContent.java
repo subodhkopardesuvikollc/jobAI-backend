@@ -18,7 +18,7 @@ public class CallContent {
 	@Setter
 	@AllArgsConstructor
 	@NoArgsConstructor
-	class Utterence {
+	public class Utterence {
 
 		private String speaker;
 		private String text;
