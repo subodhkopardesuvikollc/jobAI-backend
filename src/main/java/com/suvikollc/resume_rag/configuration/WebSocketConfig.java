@@ -6,6 +6,7 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
+import com.suvikollc.resume_rag.interceptor.ACSWebSocketInterceptor;
 import com.suvikollc.resume_rag.websockets.AcsMediaWebSocketHandler;
 
 @Configuration
@@ -15,10 +16,14 @@ public class WebSocketConfig implements WebSocketConfigurer {
 	@Autowired
 	private AcsMediaWebSocketHandler acsMediaWebSocketHandler;
 
+	@Autowired
+	private ACSWebSocketInterceptor acsWebSocketInterceptor;
+
 	@Override
 	public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
 
-		registry.addHandler(acsMediaWebSocketHandler, "/communication/call/acs/media").setAllowedOrigins("*");
+		registry.addHandler(acsMediaWebSocketHandler, "/communication/call/acs/media")
+				.addInterceptors(acsWebSocketInterceptor).setAllowedOrigins("*");
 
 	}
 

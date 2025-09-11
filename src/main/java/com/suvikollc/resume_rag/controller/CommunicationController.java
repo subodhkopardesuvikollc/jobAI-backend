@@ -33,9 +33,9 @@ public class CommunicationController {
 	}
 
 	@PostMapping("/call/start")
-	public ResponseEntity<?> startCall(@RequestBody String target) {
+	public ResponseEntity<?> startCall(@RequestBody String resumeId) {
 
-		callService.startCall(target);
+		callService.startCall(resumeId);
 		return ResponseEntity.ok("Call started successfully");
 	}
 
