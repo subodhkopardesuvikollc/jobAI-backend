@@ -16,7 +16,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.suvikollc.resume_rag.dto.ResumeAnalysisResponseDTO;
+import com.suvikollc.resume_rag.entities.Interview;
 import com.suvikollc.resume_rag.entities.Resume.ResumeIndexStatus;
+import com.suvikollc.resume_rag.repository.InterviewRepository;
+import com.suvikollc.resume_rag.repository.JdRepository;
 import com.suvikollc.resume_rag.repository.ResumeRepository;
 import com.suvikollc.resume_rag.service.ContactParserService;
 import com.suvikollc.resume_rag.service.FileService;
@@ -37,10 +40,16 @@ public class ResumeServiceImpl implements ResumeService {
 	private ResumeRepository resumeRepository;
 
 	@Autowired
+	private JdRepository jdRepository;
+
+	@Autowired
 	private ChatClient chatClient;
 
 	@Autowired
 	private FileService fileService;
+
+	@Autowired
+	private InterviewRepository interviewRepository;
 
 	@Value("${azure.storage.jd.container.name}")
 	private String jdContainerName;
@@ -107,6 +116,7 @@ public class ResumeServiceImpl implements ResumeService {
 				<instructions>
 				First, identify the core skills and qualifications required by the job description.
 				Then, for each of those skills, assess the candidate's proficiency based *only* on the resume content.
+				Finally, based on your analysis, formulate five casual screening questions. The goal of these questions is to open a conversation about the key skills mentioned in the resume that align with the job description. They should be high-level and confirmatory, not deep technical probes. For example, a good question would be, "I see you have experience with the Spring Framework; can you tell me about a project where you used it?"
 				Provide your final output in a structured JSON format that conforms to the following schema: {format}
 
 				- **overallMatchScore**: A holistic score from 1 to 100 for the candidate's fit.
@@ -115,6 +125,7 @@ public class ResumeServiceImpl implements ResumeService {
 				    - **skill**: The name of the skill.
 				    - **score**: A score from 1-100 indicating the candidate's proficiency based on the resume evidence.
 				    - **reason**: A brief sentence explaining the score, citing specific projects or experiences from the resume. If a skill is not mentioned, the score should be low and the reason should state it is missing.
+				- **screeningQuestions**: A list of exactly 5 open-ended questions designed for an initial screening call, based on your analysis.
 				</instructions>
 				""";
 
@@ -140,8 +151,16 @@ public class ResumeServiceImpl implements ResumeService {
 			log.info("Analyzing resume: {} of length {} characters, against JD: {} of length {} characters",
 					resumeBlobName, resumeContent.length(), jdBlobName, jdContent.length());
 
-			return chatClient.prompt().system(systemMessage).user(userMessage).call()
+			var response = chatClient.prompt().system(systemMessage).user(userMessage).call()
 					.entity(ResumeAnalysisResponseDTO.class);
+			if (response == null) {
+				log.error("Received null response from chat client for resume analysis");
+				return null;
+			}
+			saveScreeningQuestions(resumeBlobName, jdBlobName, response.screeningQuestions());
+
+			return response;
+
 		} catch (Exception e) {
 			throw new RuntimeException("Failed to analyze resume: " + e.getMessage());
 		}
@@ -187,6 +206,27 @@ public class ResumeServiceImpl implements ResumeService {
 		resumeRepository.save(resume);
 
 		return phoneNo;
+	}
+
+	public void saveScreeningQuestions(String resumeBlobName, String jdBlobName, List<String> questions) {
+
+		var resume = resumeRepository.findByFileName(resumeBlobName);
+		var jd = jdRepository.findByFileName(jdBlobName);
+		if (resume == null || jd == null) {
+			throw new RuntimeException("Jd or Resume not found with blob name: " + resumeBlobName);
+		}
+		Interview interview = interviewRepository.findByJdIdAndResumeId(jd.getId(), resume.getId());
+		if (interview == null) {
+
+			interview = new Interview();
+		}
+		interview.setJdId(jd.getId());
+		interview.setResumeId(resume.getId());
+		interview.setQuestions(questions);
+		interviewRepository.save(interview);
+
+		log.info("Saved {} interview questions for resume: {}, and jd: {} ", questions.size(), resumeBlobName,
+				jdBlobName);
 	}
 
 	@Override
