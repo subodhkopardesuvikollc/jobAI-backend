@@ -18,6 +18,7 @@ import com.azure.communication.callautomation.models.StreamingTransport;
 import com.azure.communication.common.PhoneNumberIdentifier;
 import com.azure.core.http.rest.Response;
 import com.azure.core.util.Context;
+import com.suvikollc.resume_rag.dto.CallInitiationDTO;
 import com.suvikollc.resume_rag.repository.ResumeRepository;
 import com.suvikollc.resume_rag.service.CallService;
 import com.suvikollc.resume_rag.service.ContactParserService;
@@ -35,8 +36,8 @@ public class CallServiceImpl implements CallService {
 	@Autowired
 	private CallAutomationClient callAutomationClient;
 
-	private String CALLBACK_HOST = "https://thin-mails-shake.loca.lt";
-	private String TRANSPORT_HOST = "wss://thin-mails-shake.loca.lt";
+	private String CALLBACK_HOST = "https://icy-bushes-behave.loca.lt";
+	private String TRANSPORT_HOST = "wss://icy-bushes-behave.loca.lt";
 
 	@Value("${azure.communication.from-phone-number}")
 	private String FROM_PHONE_NUMBER;
@@ -54,7 +55,9 @@ public class CallServiceImpl implements CallService {
 	private CallControlManager callControlManager;
 
 	@Override
-	public String startCall(String resumeId) {
+	public String startCall(CallInitiationDTO callDto) {
+		String resumeId = callDto.getResumeId();
+		String jdId = callDto.getJdId();
 
 		var resume = resumeRepository.findById(new ObjectId(resumeId)).get();
 		if (resume == null) {
@@ -62,12 +65,10 @@ public class CallServiceImpl implements CallService {
 		}
 		String toPhoneNumber = resumeService.getPhoneNo(resume.getBlobName());
 
-		toPhoneNumber = contactParserService.extractPhoneNo(toPhoneNumber);
-
 		CallInvite invite = new CallInvite(new PhoneNumberIdentifier(toPhoneNumber),
 				new PhoneNumberIdentifier(FROM_PHONE_NUMBER));
 		String CALLBACK_URI = CALLBACK_HOST + "/communication/call/callback";
-		String TRANSPORT_URL = TRANSPORT_HOST + "/communication/call/acs/media?resumeId=" + resumeId;
+		String TRANSPORT_URL = TRANSPORT_HOST + "/communication/call/acs/media?resumeId=" + resumeId + "&jdId=" + jdId;
 
 		MediaStreamingOptions mediaOptions = new MediaStreamingOptions(MediaStreamingAudioChannel.MIXED,
 				StreamingTransport.WEBSOCKET).setTransportUrl(TRANSPORT_URL).setEnableBidirectional(true)

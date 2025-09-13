@@ -22,12 +22,15 @@ public class ACSWebSocketInterceptor implements HandshakeInterceptor {
 			Map<String, Object> attributes) throws Exception {
 
 		try {
-			String resumeId = UriComponentsBuilder.fromUriString(request.getURI().toString()).build().getQueryParams()
-					.getFirst("resumeId");
-			if (resumeId != null && !resumeId.isEmpty()) {
+			var uri = UriComponentsBuilder.fromUriString(request.getURI().toString());
+			String resumeId = uri.build().getQueryParams().getFirst("resumeId");
+			String jdId = uri.build().getQueryParams().getFirst("jdId");
+			if (resumeId != null && !resumeId.isEmpty() && jdId != null && !jdId.isEmpty()) {
 				attributes.put("resumeId", resumeId);
+				attributes.put("jdId", jdId);
+
 			} else {
-				log.error("Resume ID is missing in the WebSocket handshake request");
+				log.error("Resume ID and Jd ID are missing in the WebSocket handshake request");
 
 			}
 		} catch (Exception e) {

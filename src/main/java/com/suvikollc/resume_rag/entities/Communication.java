@@ -20,18 +20,19 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Communication {
-	
 
 	@Id
 	private ObjectId id;
 
+	private ObjectId jdId;
+
 	private ObjectId resumeId;
-	
+
 	private CommunicationType type;
-	
+
 	@CreatedDate
 	private LocalDateTime timestamp;
-	
+
 	private Object content;
 
 }

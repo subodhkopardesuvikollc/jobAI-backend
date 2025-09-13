@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.suvikollc.resume_rag.dto.CallInitiationDTO;
 import com.suvikollc.resume_rag.dto.CommunicationDTO;
 import com.suvikollc.resume_rag.service.CallService;
 import com.suvikollc.resume_rag.service.CommunicationSerivce;
@@ -33,9 +34,9 @@ public class CommunicationController {
 	}
 
 	@PostMapping("/call/start")
-	public ResponseEntity<?> startCall(@RequestBody String resumeId) {
+	public ResponseEntity<?> startCall(@RequestBody CallInitiationDTO callDto) {
 
-		callService.startCall(resumeId);
+		callService.startCall(callDto);
 		return ResponseEntity.ok("Call started successfully");
 	}
 

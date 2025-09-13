@@ -18,17 +18,17 @@ public class CallContent {
 	@Setter
 	@AllArgsConstructor
 	@NoArgsConstructor
-	public class Utterence {
+	public class Utterance {
 
 		private String speaker;
 		private String text;
 
 	}
 
-	private List<Utterence> utterences = new ArrayList<>();
+	private List<Utterance> utterances = new ArrayList<>();
 
 	public void addUtterence(String speaker, String text) {
-		this.utterences.add(new Utterence(speaker, text));
+		this.utterances.add(new Utterance(speaker, text));
 	}
 
 }

@@ -16,13 +16,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.suvikollc.resume_rag.dto.ResumeAnalysisResponseDTO;
-import com.suvikollc.resume_rag.entities.Interview;
 import com.suvikollc.resume_rag.entities.Resume.ResumeIndexStatus;
-import com.suvikollc.resume_rag.repository.InterviewRepository;
-import com.suvikollc.resume_rag.repository.JdRepository;
 import com.suvikollc.resume_rag.repository.ResumeRepository;
 import com.suvikollc.resume_rag.service.ContactParserService;
 import com.suvikollc.resume_rag.service.FileService;
+import com.suvikollc.resume_rag.service.InterviewService;
 import com.suvikollc.resume_rag.service.ResumeService;
 
 @Service
@@ -40,16 +38,13 @@ public class ResumeServiceImpl implements ResumeService {
 	private ResumeRepository resumeRepository;
 
 	@Autowired
-	private JdRepository jdRepository;
+	private InterviewService interviewService;
 
 	@Autowired
 	private ChatClient chatClient;
 
 	@Autowired
 	private FileService fileService;
-
-	@Autowired
-	private InterviewRepository interviewRepository;
 
 	@Value("${azure.storage.jd.container.name}")
 	private String jdContainerName;
@@ -157,7 +152,7 @@ public class ResumeServiceImpl implements ResumeService {
 				log.error("Received null response from chat client for resume analysis");
 				return null;
 			}
-			saveScreeningQuestions(resumeBlobName, jdBlobName, response.screeningQuestions());
+			interviewService.saveScreeningQuestions(resumeBlobName, jdBlobName, response.screeningQuestions());
 
 			return response;
 
@@ -195,7 +190,7 @@ public class ResumeServiceImpl implements ResumeService {
 			throw new RuntimeException("Resume not found with blob name: " + resumeBlobName);
 		}
 		if (resume.getPhoneNo() != null && !resume.getPhoneNo().isEmpty()) {
-			return resume.getPhoneNo();
+			return contactParserService.extractPhoneNo(resume.getPhoneNo());
 		}
 		String content = fileService.extractContent(resumeBlobName, resumeContainerName);
 		String phoneNo = contactParserService.extractPhoneNo(content);
@@ -206,27 +201,6 @@ public class ResumeServiceImpl implements ResumeService {
 		resumeRepository.save(resume);
 
 		return phoneNo;
-	}
-
-	public void saveScreeningQuestions(String resumeBlobName, String jdBlobName, List<String> questions) {
-
-		var resume = resumeRepository.findByFileName(resumeBlobName);
-		var jd = jdRepository.findByFileName(jdBlobName);
-		if (resume == null || jd == null) {
-			throw new RuntimeException("Jd or Resume not found with blob name: " + resumeBlobName);
-		}
-		Interview interview = interviewRepository.findByJdIdAndResumeId(jd.getId(), resume.getId());
-		if (interview == null) {
-
-			interview = new Interview();
-		}
-		interview.setJdId(jd.getId());
-		interview.setResumeId(resume.getId());
-		interview.setQuestions(questions);
-		interviewRepository.save(interview);
-
-		log.info("Saved {} interview questions for resume: {}, and jd: {} ", questions.size(), resumeBlobName,
-				jdBlobName);
 	}
 
 	@Override
