@@ -5,5 +5,7 @@ import com.suvikollc.resume_rag.dto.CallInitiationDTO;
 public interface CallService {
 	
 	String startCall(CallInitiationDTO callDto);
+	
+	boolean isCallInProgress();
 
 }

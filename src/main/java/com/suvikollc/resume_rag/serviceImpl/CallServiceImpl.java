@@ -19,10 +19,11 @@ import com.azure.communication.common.PhoneNumberIdentifier;
 import com.azure.core.http.rest.Response;
 import com.azure.core.util.Context;
 import com.suvikollc.resume_rag.dto.CallInitiationDTO;
+import com.suvikollc.resume_rag.exceptions.CallInProgressException;
 import com.suvikollc.resume_rag.repository.ResumeRepository;
 import com.suvikollc.resume_rag.service.CallService;
-import com.suvikollc.resume_rag.service.ContactParserService;
 import com.suvikollc.resume_rag.service.ResumeService;
+import com.suvikollc.resume_rag.websockets.ACSSessionManager;
 import com.suvikollc.resume_rag.websockets.CallControlManager;
 
 import jakarta.annotation.PostConstruct;
@@ -48,13 +49,13 @@ public class CallServiceImpl implements CallService {
 	private String FROM_PHONE_NUMBER;
 
 	@Autowired
-	private ContactParserService contactParserService;
-
-	@Autowired
 	private ResumeRepository resumeRepository;
 
 	@Autowired
 	private ResumeService resumeService;
+
+	@Autowired
+	private ACSSessionManager acsSessionManager;
 
 	@Autowired
 	private CallControlManager callControlManager;
@@ -70,6 +71,11 @@ public class CallServiceImpl implements CallService {
 
 	@Override
 	public String startCall(CallInitiationDTO callDto) {
+
+		if (isCallInProgress()) {
+			throw new CallInProgressException("A call is already in progress. Please wait until it finishes.");
+		}
+
 		String resumeId = callDto.getResumeId();
 		String jdId = callDto.getJdId();
 
@@ -94,6 +100,16 @@ public class CallServiceImpl implements CallService {
 		log.info("Call started with ID: {}", result.getValue().getCallConnectionProperties().getCallConnectionId());
 		return result.getValue().getCallConnection().getCallProperties().getCallConnectionId();
 
+	}
+
+	@Override
+	public boolean isCallInProgress() {
+
+		var session = acsSessionManager.getAcsSession().get();
+		if (session == null) {
+			return false;
+		}
+		return session.isOpen();
 	}
 
 }

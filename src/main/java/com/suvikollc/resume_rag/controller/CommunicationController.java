@@ -9,9 +9,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.suvikollc.resume_rag.dto.CallInitiationDTO;
 import com.suvikollc.resume_rag.dto.CommunicationDTO;
-import com.suvikollc.resume_rag.service.CallService;
+import com.suvikollc.resume_rag.exceptions.CallInProgressException;
+import com.suvikollc.resume_rag.service.CallManagementService;
 import com.suvikollc.resume_rag.service.CommunicationSerivce;
 
 @RestController
@@ -24,27 +24,41 @@ public class CommunicationController {
 	private CommunicationSerivce communicationSerivce;
 
 	@Autowired
-	private CallService callService;
+	private CallManagementService callManagementService;
 
 	@PostMapping("/produce")
 	public ResponseEntity<?> produceMessage(@RequestBody CommunicationDTO comDto) {
 
 		communicationSerivce.produceCommunication(comDto);
+
 		return ResponseEntity.ok("Message produced successfully");
 	}
 
-	@PostMapping("/call/start")
-	public ResponseEntity<?> startCall(@RequestBody CallInitiationDTO callDto) {
+	@PostMapping("/call/produce")
+	public ResponseEntity<?> produceCallMessage(@RequestBody CommunicationDTO comDto) {
+		try {
+			String response = callManagementService.initiateCall(comDto);
+			return ResponseEntity.ok(response);
+		} catch (CallInProgressException e) {
+			return ResponseEntity.badRequest().body(e.getMessage());
+		} catch (Exception e) {
+			log.error("Error producing message: {}", e.getMessage(), e);
+			return ResponseEntity.status(500).body("Failed to produce message: " + e.getMessage());
+		}
 
-		callService.startCall(callDto);
-		return ResponseEntity.ok("Call started successfully");
 	}
+
+//	@PostMapping("/call/start")
+//	public ResponseEntity<?> startCall(@RequestBody CallInitiationDTO callDto) {
+//
+//		callService.startCall(callDto);
+//		return ResponseEntity.ok("Call started successfully");
+//	}
 
 	@PostMapping("/call/callback")
 	public ResponseEntity<String> handleCallback(@RequestBody(required = false) String payload) {
-
-		// Normal event handling
-		System.out.println("Received ACS callback: " + payload);
+		// TODO: Should initiate screening analysis upon call end event
+		log.info("Received ACS callback: {}", payload);
 		return ResponseEntity.ok().build();
 	}
 
