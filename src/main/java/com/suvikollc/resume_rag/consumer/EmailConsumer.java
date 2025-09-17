@@ -1,4 +1,4 @@
-package com.suvikollc.resume_rag.serviceImpl;
+package com.suvikollc.resume_rag.consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -34,13 +34,13 @@ public class CallMangementServiceImpl implements CallManagementService {
 	@Override
 	public String initiateCall(CommunicationDTO commDto) {
 
-		if (callService.isCallInProgress()) {
-			throw new CallInProgressException("A call is already in progress. Please try again later.");
-		}
-
 		try {
 
 			CallInitiationDTO callDto = objectMapper.convertValue(commDto.getPayload(), CallInitiationDTO.class);
+			if (callService.isCallInProgress()) {
+				interviewService.updateInterviewStatus(Status.FAILED, callDto.getResumeId(), callDto.getJdId());
+				throw new CallInProgressException("A call is already in progress. Please try again later.");
+			}
 			interviewService.updateInterviewStatus(Status.QUEUED, callDto.getResumeId(), callDto.getJdId());
 			commService.produceCommunication(commDto);
 		} catch (Exception e) {

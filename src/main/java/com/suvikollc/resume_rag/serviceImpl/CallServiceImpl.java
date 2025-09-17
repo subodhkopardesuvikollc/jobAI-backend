@@ -19,9 +19,11 @@ import com.azure.communication.common.PhoneNumberIdentifier;
 import com.azure.core.http.rest.Response;
 import com.azure.core.util.Context;
 import com.suvikollc.resume_rag.dto.CallInitiationDTO;
+import com.suvikollc.resume_rag.entities.Interview.Status;
 import com.suvikollc.resume_rag.exceptions.CallInProgressException;
 import com.suvikollc.resume_rag.repository.ResumeRepository;
 import com.suvikollc.resume_rag.service.CallService;
+import com.suvikollc.resume_rag.service.InterviewService;
 import com.suvikollc.resume_rag.service.ResumeService;
 import com.suvikollc.resume_rag.websockets.ACSSessionManager;
 import com.suvikollc.resume_rag.websockets.CallControlManager;
@@ -58,6 +60,9 @@ public class CallServiceImpl implements CallService {
 	private ACSSessionManager acsSessionManager;
 
 	@Autowired
+	private InterviewService interviewService;
+
+	@Autowired
 	private CallControlManager callControlManager;
 
 	@PostConstruct
@@ -73,6 +78,7 @@ public class CallServiceImpl implements CallService {
 	public String startCall(CallInitiationDTO callDto) {
 
 		if (isCallInProgress()) {
+			interviewService.updateInterviewStatus(Status.FAILED, callDto.getResumeId(), callDto.getJdId());
 			throw new CallInProgressException("A call is already in progress. Please wait until it finishes.");
 		}
 

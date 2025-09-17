@@ -29,13 +29,13 @@ public class Interview {
 
 	private List<String> questions;
 
-	private Status status = Status.PENDING;
+	private Status status = Status.NOT_STARTED;
 
 	@CreatedDate
 	private LocalDateTime createdAt;
 
 	public enum Status {
-		PENDING, IN_PROGRESS, COMPLETED, FAILED
+		NOT_STARTED, QUEUED, IN_PROGRESS, COMPLETED, FAILED
 	}
 
 }

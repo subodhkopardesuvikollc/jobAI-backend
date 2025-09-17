@@ -160,6 +160,8 @@ public class AzureVoiceLiveWebSocketHandler extends TextWebSocketHandler {
 			for (String keyword : VOICEMAIL_KEYWORDS) {
 				if (currentText.contains(keyword)) {
 					logger.info("Voicemail keyword detected: {}", keyword);
+					interviewService.updateInterviewStatus(Status.FAILED, currentCommunication.getResumeId().toString(),
+							currentCommunication.getJdId().toString());
 					callControlManager.hangupCall();
 					break;
 				}
