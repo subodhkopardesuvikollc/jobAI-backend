@@ -25,6 +25,8 @@ import com.suvikollc.resume_rag.service.ContactParserService;
 import com.suvikollc.resume_rag.service.ResumeService;
 import com.suvikollc.resume_rag.websockets.CallControlManager;
 
+import jakarta.annotation.PostConstruct;
+
 @Service
 public class CallServiceImpl implements CallService {
 
@@ -36,8 +38,11 @@ public class CallServiceImpl implements CallService {
 	@Autowired
 	private CallAutomationClient callAutomationClient;
 
-	private String CALLBACK_HOST = "https://icy-bushes-behave.loca.lt";
-	private String TRANSPORT_HOST = "wss://icy-bushes-behave.loca.lt";
+	@Value("${app.url.host}")
+	private String APP_HOST;
+
+	private String CALLBACK_HOST;
+	private String TRANSPORT_HOST;
 
 	@Value("${azure.communication.from-phone-number}")
 	private String FROM_PHONE_NUMBER;
@@ -53,6 +58,15 @@ public class CallServiceImpl implements CallService {
 
 	@Autowired
 	private CallControlManager callControlManager;
+
+	@PostConstruct
+	public void init() {
+		log.info("App Host: {}", APP_HOST);
+		CALLBACK_HOST = APP_HOST;
+		TRANSPORT_HOST = APP_HOST.replace("https", "wss");
+		log.info("Callback Host: {}", CALLBACK_HOST);
+		log.info("Transport Host: {}", TRANSPORT_HOST);
+	}
 
 	@Override
 	public String startCall(CallInitiationDTO callDto) {
