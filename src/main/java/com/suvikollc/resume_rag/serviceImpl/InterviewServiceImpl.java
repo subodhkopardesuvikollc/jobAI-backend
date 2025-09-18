@@ -59,7 +59,7 @@ public class InterviewServiceImpl implements InterviewService {
 		log.info("Saved {} interview questions for resume: {}, and jd: {} ", questions.size(), resumeBlobName,
 				jdBlobName);
 	}
-	
+
 	public void updateInterviewStatus(Status status, String resumeId, String jdId) {
 		var interview = interviewRepository.findByJdIdAndResumeId(new ObjectId(jdId), new ObjectId(resumeId));
 		if (interview == null) {
@@ -68,6 +68,15 @@ public class InterviewServiceImpl implements InterviewService {
 		interview.setStatus(status);
 		interviewRepository.save(interview);
 		log.info("Updated interview status to {} for resumeId: {} and jdId: {}", status, resumeId, jdId);
+	}
+
+	@Override
+	public Interview getInterviewByIds(String resumeId, String jdId) {
+		var interview = interviewRepository.findByJdIdAndResumeId(new ObjectId(jdId), new ObjectId(resumeId));
+		if (interview == null) {
+			throw new RuntimeException("No interview found for resumeId: " + resumeId + " and jdId: " + jdId);
+		}
+		return interview;
 	}
 
 }
