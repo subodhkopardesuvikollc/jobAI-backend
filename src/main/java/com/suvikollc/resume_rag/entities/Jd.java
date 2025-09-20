@@ -1,13 +1,11 @@
 package com.suvikollc.resume_rag.entities;
 
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

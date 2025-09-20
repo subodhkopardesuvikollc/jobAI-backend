@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
@@ -24,6 +25,7 @@ import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.models.BlobItem;
 import com.suvikollc.resume_rag.dto.ResumeResultsDto;
 import com.suvikollc.resume_rag.dto.SearchResultsDto;
+import com.suvikollc.resume_rag.entities.Resume;
 import com.suvikollc.resume_rag.entities.Resume.ResumeIndexStatus;
 import com.suvikollc.resume_rag.service.FileService;
 import com.suvikollc.resume_rag.service.ResumeChunkingService;
@@ -95,6 +97,15 @@ public class VectorDBServiceImpl implements VectorDBService {
 					chunkedDocuments = agenticChunkingService.chunkResume(resumeContent, resumeFileName);
 				} else {
 					chunkedDocuments = sectionBasedChunkingImpl.chunkResume(resumeContent, resumeFileName);
+				}
+
+				var contactDocument = chunkedDocuments.stream()
+						.filter(doc -> "contact_info".equalsIgnoreCase((String) doc.getMetadata().get("section")))
+						.findFirst();
+				if (contactDocument.isEmpty()) {
+					log.warn("No contact_info section found in resume: {}", resumeFileName);
+				} else {
+					resumeService.updateResumeContactInfo(resumeFileName, contactDocument.get().getText());
 				}
 
 				log.info("Split document {} into {} chunks.", resumeFileName, chunkedDocuments.size());
@@ -201,7 +212,8 @@ public class VectorDBServiceImpl implements VectorDBService {
 				}
 				Double score = entry.getValue();
 				String resumeUrl = fileService.getSharableUrl(resumeName, resumeContainerName);
-				return new ResumeResultsDto(resumeName, resumeUrl, score);
+				ObjectId resumeId = fileService.getFileByFileName(resumeName, Resume.class).getId();
+				return new ResumeResultsDto(resumeId, resumeName, resumeUrl, score);
 			}).collect(Collectors.toList());
 
 			return new SearchResultsDto(jdUrl, resumeResult);

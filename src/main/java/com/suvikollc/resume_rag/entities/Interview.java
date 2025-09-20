@@ -1,39 +1,41 @@
 package com.suvikollc.resume_rag.entities;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@AllArgsConstructor
-@NoArgsConstructor
+@Document
 @Getter
 @Setter
-public class File {
+@AllArgsConstructor
+@NoArgsConstructor
+public class Interview {
 
 	@Id
 	private ObjectId id;
 
-	private String fileName;
+	private ObjectId jdId;
 
-	private String blobName;
+	private ObjectId resumeId;
+
+	private List<String> questions;
+
+	private Status status = Status.NOT_STARTED;
 
 	@CreatedDate
 	private LocalDateTime createdAt;
 
-	@LastModifiedDate
-	private LocalDateTime updatedAt;
-
-	public String toString() {
-		return "File [id=" + id + ", fileName=" + fileName + ", blobName=" + blobName + ", createdAt=" + createdAt
-				+ ", updatedAt=" + updatedAt + "]";
+	public enum Status {
+		NOT_STARTED, QUEUED, IN_PROGRESS, COMPLETED, FAILED
 	}
 
 }

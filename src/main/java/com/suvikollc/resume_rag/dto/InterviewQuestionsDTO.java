@@ -1,23 +1,22 @@
 package com.suvikollc.resume_rag.dto;
 
-import org.bson.types.ObjectId;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@AllArgsConstructor
 @Getter
 @Setter
+@AllArgsConstructor
 @NoArgsConstructor
-public class ResumeResultsDto {
+public class InterviewQuestionsDTO {
 	
-	private ObjectId id;
-	private String fileName;
-	private String fileUrl;
-	private Double score;
-
+	private String resumeId;
+	private String jdId;
+	
+	private List<String> questions;
 	
 
 }

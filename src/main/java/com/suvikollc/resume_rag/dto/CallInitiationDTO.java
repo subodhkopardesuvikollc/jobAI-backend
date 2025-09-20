@@ -1,23 +1,17 @@
 package com.suvikollc.resume_rag.dto;
 
-import org.bson.types.ObjectId;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@AllArgsConstructor
 @Getter
 @Setter
+@AllArgsConstructor
 @NoArgsConstructor
-public class ResumeResultsDto {
-	
-	private ObjectId id;
-	private String fileName;
-	private String fileUrl;
-	private Double score;
+public class CallInitiationDTO {
 
-	
+	private String resumeId;
+	private String jdId;
 
 }

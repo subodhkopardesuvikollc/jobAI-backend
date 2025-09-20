@@ -13,6 +13,7 @@ import com.suvikollc.resume_rag.dto.SearchRequestDto;
 import com.suvikollc.resume_rag.entities.Jd;
 import com.suvikollc.resume_rag.entities.Resume;
 import com.suvikollc.resume_rag.service.FileService;
+import com.suvikollc.resume_rag.service.InterviewService;
 import com.suvikollc.resume_rag.service.VectorDBService;
 
 @RestController
@@ -23,6 +24,9 @@ public class SearchController {
 
 	@Autowired
 	FileService fileService;
+
+	@Autowired
+	InterviewService interviewService;
 
 	@PostMapping("/search")
 	public ResponseEntity<?> getMethodName(@RequestBody SearchRequestDto dto) {
@@ -67,6 +71,14 @@ public class SearchController {
 		}
 
 		return ResponseEntity.ok(fileService.getAllFilesWithUrl(Resume.class));
+	}
+
+	@GetMapping("/interview")
+	public ResponseEntity<?> getInterview(@RequestParam(required = true) String resumeId,
+			@RequestParam(required = true) String jdId) {
+
+		return ResponseEntity.ok(interviewService.getInterviewByIds(resumeId, jdId));
+
 	}
 
 }
