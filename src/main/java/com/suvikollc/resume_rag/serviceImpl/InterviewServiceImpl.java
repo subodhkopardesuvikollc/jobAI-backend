@@ -30,7 +30,7 @@ public class InterviewServiceImpl implements InterviewService {
 
 	@Autowired
 	private JdRepository jdRepository;
-	
+
 	@Autowired
 	private CommunicationRepository communicationRepository;
 
@@ -100,15 +100,24 @@ public class InterviewServiceImpl implements InterviewService {
 	public Interview getInterviewByIds(String resumeId, String jdId) {
 		var interview = interviewRepository.findByJdIdAndResumeId(new ObjectId(jdId), new ObjectId(resumeId));
 		if (interview == null) {
-			throw new RuntimeException("No interview found for resumeId: " + resumeId + " and jdId: " + jdId);
+			interview = new Interview();
+			interview.setJdId(new ObjectId(jdId));
+			interview.setResumeId(new ObjectId(resumeId));
+			interview.setQuestions(List.of());
+			interview.setStatus(Status.NOT_STARTED);
+
+			log.info("No interview found for resumeId: {} and jdId: {}. Creating a new one.", resumeId, jdId);
+			return interviewRepository.save(interview);
+
 		}
 		return interview;
 	}
 
 	@Override
 	public List<Communication> getInterviewCommunications(String resumeId, String jdId) {
-		
-		var communications = communicationRepository.findAllByJdIdAndResumeId(new ObjectId(jdId), new ObjectId(resumeId));
+
+		var communications = communicationRepository.findAllByJdIdAndResumeId(new ObjectId(jdId),
+				new ObjectId(resumeId));
 		if (communications == null || communications.isEmpty()) {
 			log.info("No communications found for resumeId: {} and jdId: {}", resumeId, jdId);
 			return List.of();
