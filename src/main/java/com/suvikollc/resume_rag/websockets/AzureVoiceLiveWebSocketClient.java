@@ -51,6 +51,10 @@ public class AzureVoiceLiveWebSocketClient {
 			}
 		}
 	}
+	
+	public boolean isConnected() {
+		return session != null && session.isOpen();
+	}
 
 	public void close() {
 		try {

@@ -15,7 +15,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Component
 public class AcsMediaWebSocketHandler extends TextWebSocketHandler {
-	private WebSocketSession acsSession;
 
 	@Autowired
 	private ACSSessionManager acsSessionManager;
@@ -28,6 +27,7 @@ public class AcsMediaWebSocketHandler extends TextWebSocketHandler {
 
 	@Override
 	public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+		session.setTextMessageSizeLimit(1024 * 1024); // 1 MB
 		acsSessionManager.setSession(session);
 		webSocketClient.connect().thenRun(() -> {
 			log.info("Connected to Azure OpenAI WebSocket");
@@ -46,6 +46,9 @@ public class AcsMediaWebSocketHandler extends TextWebSocketHandler {
 			String payload = message.getPayload();
 			JsonNode json = objectMapper.readTree(payload);
 			if ("AudioData".equals(json.get("kind").asText()) && !json.get("audioData").get("silent").asBoolean()) {
+				if (!webSocketClient.isConnected()) {
+					return;
+				}
 				ObjectNode audioNode = objectMapper.createObjectNode();
 				audioNode.put("type", "input_audio_buffer.append");
 				audioNode.put("audio", json.get("audioData").get("data").asText());
@@ -62,7 +65,7 @@ public class AcsMediaWebSocketHandler extends TextWebSocketHandler {
 	public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
 		log.info("WebSocket connection closed with ACS Media Service: {}", status);
 		webSocketClient.close();
-		this.acsSession = null;
+		acsSessionManager.clearSession();
 	}
 
 }

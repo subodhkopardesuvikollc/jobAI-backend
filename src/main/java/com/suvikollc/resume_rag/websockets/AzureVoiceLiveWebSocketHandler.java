@@ -59,6 +59,7 @@ public class AzureVoiceLiveWebSocketHandler extends TextWebSocketHandler {
 
 	@Override
 	public void afterConnectionEstablished(WebSocketSession session) {
+		session.setTextMessageSizeLimit(1024 * 1024); // 1 MB
 		logger.info("WebSocket connection established with OpenAI");
 
 		this.currentCallLog = new CallContent();
@@ -227,13 +228,13 @@ public class AzureVoiceLiveWebSocketHandler extends TextWebSocketHandler {
 		voice.put("type", "azure-standard");
 		voice.put("temperature", 0.8);
 
-//		ObjectNode turn_detection = session.putObject("turn_detection");
-//		turn_detection.put("type", "azure_semantic_vad");
-//		turn_detection.put("threshold", 0.3);
-//		turn_detection.put("prefix_padding_ms", 200);
-//		turn_detection.put("remove_filler_words", true);
-//		turn_detection.put("silence_duration_ms", 500);
-//
+		ObjectNode turn_detection = session.putObject("turn_detection");
+		turn_detection.put("type", "azure_semantic_vad");
+		turn_detection.put("threshold", 0.3);
+		turn_detection.put("prefix_padding_ms", 200);
+		turn_detection.put("remove_filler_words", true);
+		turn_detection.put("silence_duration_ms", 500);
+
 //		ObjectNode end_of_utterance = turn_detection.putObject("end_of_utterance_detection");
 //		end_of_utterance.put("model", "semantic_detection_v1");
 //		end_of_utterance.put("threshold", 0.01);
@@ -241,6 +242,7 @@ public class AzureVoiceLiveWebSocketHandler extends TextWebSocketHandler {
 
 		ObjectNode input_audio = session.putObject("input_audio_transcription");
 		input_audio.put("model", "gpt-4o-mini-transcribe");
+		input_audio.put("language", "en-US");
 
 		session.put("instructions", systemPrompt);
 
