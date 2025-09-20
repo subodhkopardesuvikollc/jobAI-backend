@@ -8,8 +8,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.suvikollc.resume_rag.entities.Communication;
 import com.suvikollc.resume_rag.entities.Interview;
 import com.suvikollc.resume_rag.entities.Interview.Status;
+import com.suvikollc.resume_rag.repository.CommunicationRepository;
 import com.suvikollc.resume_rag.repository.InterviewRepository;
 import com.suvikollc.resume_rag.repository.JdRepository;
 import com.suvikollc.resume_rag.repository.ResumeRepository;
@@ -28,6 +30,9 @@ public class InterviewServiceImpl implements InterviewService {
 
 	@Autowired
 	private JdRepository jdRepository;
+	
+	@Autowired
+	private CommunicationRepository communicationRepository;
 
 	@Override
 	public List<String> getInterviewQuestions(String resumeId, String jdId) {
@@ -39,7 +44,7 @@ public class InterviewServiceImpl implements InterviewService {
 		throw new RuntimeException("No interview questions found for resumeId: " + resumeId + " and jdId: " + jdId);
 	}
 
-	public void saveScreeningQuestions(String resumeBlobName, String jdBlobName, List<String> questions) {
+	public void saveInterviewQuestions(String resumeBlobName, String jdBlobName, List<String> questions) {
 
 		var resume = resumeRepository.findByFileName(resumeBlobName);
 		var jd = jdRepository.findByFileName(jdBlobName);
@@ -61,7 +66,7 @@ public class InterviewServiceImpl implements InterviewService {
 	}
 
 	@Override
-	public void saveScreeningQuestionsById(String resumeId, String jdId, List<String> questions) {
+	public void saveInterviewQuestionsById(String resumeId, String jdId, List<String> questions) {
 		var resume = resumeRepository.findById(new ObjectId(resumeId)).orElse(null);
 		var jd = jdRepository.findById(new ObjectId(jdId)).orElse(null);
 		if (resume == null || jd == null) {
@@ -98,6 +103,17 @@ public class InterviewServiceImpl implements InterviewService {
 			throw new RuntimeException("No interview found for resumeId: " + resumeId + " and jdId: " + jdId);
 		}
 		return interview;
+	}
+
+	@Override
+	public List<Communication> getInterviewCommunications(String resumeId, String jdId) {
+		
+		var communications = communicationRepository.findAllByJdIdAndResumeId(new ObjectId(jdId), new ObjectId(resumeId));
+		if (communications == null || communications.isEmpty()) {
+			log.info("No communications found for resumeId: {} and jdId: {}", resumeId, jdId);
+			return List.of();
+		}
+		return communications;
 	}
 
 }

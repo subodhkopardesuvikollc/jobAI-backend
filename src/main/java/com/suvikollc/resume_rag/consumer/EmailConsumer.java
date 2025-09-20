@@ -47,7 +47,7 @@ public class EmailConsumer {
 	}
 
 	@SuppressWarnings("deprecation")
-	@Scheduled(fixedDelay = 20000)
+	@Scheduled(fixedDelay = 50000)
 	public void checkForNewEmails() {
 
 		log.info("Checking for new emails in the queue...");

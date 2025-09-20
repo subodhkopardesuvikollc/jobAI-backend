@@ -152,7 +152,7 @@ public class ResumeServiceImpl implements ResumeService {
 				log.error("Received null response from chat client for resume analysis");
 				return null;
 			}
-			interviewService.saveScreeningQuestions(resumeBlobName, jdBlobName, response.screeningQuestions());
+			interviewService.saveInterviewQuestions(resumeBlobName, jdBlobName, response.screeningQuestions());
 
 			return response;
 

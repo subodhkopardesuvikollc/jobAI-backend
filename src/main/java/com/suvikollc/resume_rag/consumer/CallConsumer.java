@@ -47,7 +47,7 @@ public class CallConsumer {
 				.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false).registerModule(new JavaTimeModule());
 	}
 
-	@Scheduled(fixedDelay = 30000)
+	@Scheduled(fixedDelay = 50000)
 	public void checkForNewCalls() {
 		log.info("Checking for new call requests in the queue...");
 
