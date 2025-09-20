@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
@@ -24,6 +25,7 @@ import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.models.BlobItem;
 import com.suvikollc.resume_rag.dto.ResumeResultsDto;
 import com.suvikollc.resume_rag.dto.SearchResultsDto;
+import com.suvikollc.resume_rag.entities.Resume;
 import com.suvikollc.resume_rag.entities.Resume.ResumeIndexStatus;
 import com.suvikollc.resume_rag.service.FileService;
 import com.suvikollc.resume_rag.service.ResumeChunkingService;
@@ -210,7 +212,8 @@ public class VectorDBServiceImpl implements VectorDBService {
 				}
 				Double score = entry.getValue();
 				String resumeUrl = fileService.getSharableUrl(resumeName, resumeContainerName);
-				return new ResumeResultsDto(resumeName, resumeUrl, score);
+				ObjectId resumeId = fileService.getFileByFileName(resumeName, Resume.class).getId();
+				return new ResumeResultsDto(resumeId, resumeName, resumeUrl, score);
 			}).collect(Collectors.toList());
 
 			return new SearchResultsDto(jdUrl, resumeResult);

@@ -60,6 +60,27 @@ public class InterviewServiceImpl implements InterviewService {
 				jdBlobName);
 	}
 
+	@Override
+	public void saveScreeningQuestionsById(String resumeId, String jdId, List<String> questions) {
+		var resume = resumeRepository.findById(new ObjectId(resumeId)).orElse(null);
+		var jd = jdRepository.findById(new ObjectId(jdId)).orElse(null);
+		if (resume == null || jd == null) {
+			throw new RuntimeException("Jd or Resume not found with IDs \n resumeId: " + resumeId + " jdId: " + jdId);
+		}
+		Interview interview = interviewRepository.findByJdIdAndResumeId(jd.getId(), resume.getId());
+		if (interview == null) {
+
+			interview = new Interview();
+		}
+		interview.setJdId(jd.getId());
+		interview.setResumeId(resume.getId());
+		interview.setQuestions(questions);
+		interviewRepository.save(interview);
+
+		log.info("Saved {} interview questions for resume: {}, and jd: {} ", questions.size(), resumeId, jdId);
+
+	}
+
 	public void updateInterviewStatus(Status status, String resumeId, String jdId) {
 		var interview = interviewRepository.findByJdIdAndResumeId(new ObjectId(jdId), new ObjectId(resumeId));
 		if (interview == null) {
