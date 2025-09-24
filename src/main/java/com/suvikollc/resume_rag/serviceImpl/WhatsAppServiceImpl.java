@@ -82,7 +82,7 @@ public class WhatsAppServiceImpl implements WhatsAppService {
 	}
 
 	private Object sendInitilaTemplateMessage(Communication communication) {
-		String InitialMessage = "Hello {} Are you looking for a new role? We have a job requirement that we are excited to discuss with you. Job Title:{}";
+		String InitialMessage = "Hello %s Are you looking for a new role? We have a job requirement that we are excited to discuss with you. Job Title:%s";
 
 		Resume resume = resumeRepository.findById(communication.getResumeId())
 				.orElseThrow(() -> new RuntimeException("Resume not found with id: " + communication.getResumeId()));
@@ -137,8 +137,8 @@ public class WhatsAppServiceImpl implements WhatsAppService {
 			content.setChatStatus(status.CHAT_INITIATED);
 			Utterance utterance = new Utterance();
 			utterance.setSpeaker("model");
-			utterance.setText(InitialMessage.replace("{}", formatJdFileName(resumeBlobName)).replace("{}",
-					formatJdFileName(jdBlobName)));
+			utterance
+					.setText(String.format(InitialMessage, formatFileName(resumeBlobName), formatFileName(jdBlobName)));
 			content.getUtterances().add(utterance);
 			communication.setContent(content);
 
@@ -151,12 +151,18 @@ public class WhatsAppServiceImpl implements WhatsAppService {
 		}
 	}
 
-	private String formatJdFileName(String jdBlobName) {
+	private String formatFileName(String jdBlobName) {
 		if (jdBlobName == null || jdBlobName.isEmpty()) {
 			return "the job description";
 		}
 		String fileName = jdBlobName.contains(".") ? jdBlobName.substring(0, jdBlobName.lastIndexOf('.')) : jdBlobName;
 		fileName = fileName.replaceAll("[-_]", " ");
+		String[] words = fileName.split("\\s+");
+		if (words.length >= 2) {
+			return words[0] + " " + words[1];
+		} else if (words.length == 1) {
+			return words[0];
+		}
 		return fileName;
 	}
 }
