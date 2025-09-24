@@ -7,12 +7,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.suvikollc.resume_rag.dto.CommunicationDTO;
 import com.suvikollc.resume_rag.exceptions.CallInProgressException;
 import com.suvikollc.resume_rag.service.CallManagementService;
 import com.suvikollc.resume_rag.service.CommunicationSerivce;
+import com.suvikollc.resume_rag.service.WhatsAppService;
 
 @RestController
 @RequestMapping("/communication")
@@ -25,6 +27,9 @@ public class CommunicationController {
 
 	@Autowired
 	private CallManagementService callManagementService;
+
+	@Autowired
+	private WhatsAppService whatsAppService;
 
 	@PostMapping("/produce")
 	public ResponseEntity<?> produceMessage(@RequestBody CommunicationDTO comDto) {
@@ -54,6 +59,21 @@ public class CommunicationController {
 //		callService.startCall(callDto);
 //		return ResponseEntity.ok("Call started successfully");
 //	}
+
+	@PostMapping("/whatsapp/send")
+	public ResponseEntity<?> sendWhatsAppMessage(@RequestParam(required = true) String resumeId,
+			@RequestParam(required = true) String jdId) {
+
+		try {
+
+			return ResponseEntity.ok(whatsAppService.sendMessage(resumeId, jdId));
+
+		} catch (Exception e) {
+			log.error("Error sending WhatsApp message: {}", e.getMessage(), e);
+			return ResponseEntity.status(500).body("Failed to send WhatsApp message: " + e.getMessage());
+		}
+
+	}
 
 	@PostMapping("/call/callback")
 	public ResponseEntity<String> handleCallback(@RequestBody(required = false) String payload) {
