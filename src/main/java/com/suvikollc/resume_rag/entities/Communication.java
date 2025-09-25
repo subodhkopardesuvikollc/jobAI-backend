@@ -32,6 +32,8 @@ public class Communication {
 
 	@CreatedDate
 	private LocalDateTime timestamp;
+	
+	private String contentId;
 
 	private Object content;
 

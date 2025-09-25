@@ -10,12 +10,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.suvikollc.resume_rag.dto.CommunicationDTO.CommunicationType;
 import com.suvikollc.resume_rag.dto.Utterance;
 import com.suvikollc.resume_rag.dto.WhatsAppContentDTO;
 import com.suvikollc.resume_rag.dto.WhatsAppContentDTO.status;
+import com.suvikollc.resume_rag.dto.WhatsAppSendResponse;
 import com.suvikollc.resume_rag.entities.Communication;
 import com.suvikollc.resume_rag.entities.Jd;
 import com.suvikollc.resume_rag.entities.Resume;
@@ -128,11 +128,11 @@ public class WhatsAppServiceImpl implements WhatsAppService {
 		try {
 
 			var response = restClient.post().uri("/messages").body(payload).retrieve()
-					.body(new ParameterizedTypeReference<Object>() {
+					.body(new ParameterizedTypeReference<WhatsAppSendResponse>() {
 					});
 
 			log.info("WhatsApp message sent successfully to {}: {}", phoneNumber, response);
-
+			communication.setContentId(response.contacts().get(0).waId());
 			WhatsAppContentDTO content = new WhatsAppContentDTO();
 			content.setChatStatus(status.CHAT_INITIATED);
 			Utterance utterance = new Utterance();
