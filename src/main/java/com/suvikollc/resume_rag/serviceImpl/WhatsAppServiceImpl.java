@@ -11,6 +11,7 @@ import org.springframework.web.client.RestClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.suvikollc.resume_rag.dto.ChatResponse;
 import com.suvikollc.resume_rag.dto.CommunicationDTO.CommunicationType;
 import com.suvikollc.resume_rag.dto.Utterance;
 import com.suvikollc.resume_rag.dto.WhatsAppContentDTO;
@@ -22,6 +23,8 @@ import com.suvikollc.resume_rag.entities.Resume;
 import com.suvikollc.resume_rag.repository.CommunicationRepository;
 import com.suvikollc.resume_rag.repository.JdRepository;
 import com.suvikollc.resume_rag.repository.ResumeRepository;
+import com.suvikollc.resume_rag.service.AzureChatPlaygroundService;
+import com.suvikollc.resume_rag.service.JDService;
 import com.suvikollc.resume_rag.service.ResumeService;
 import com.suvikollc.resume_rag.service.WhatsAppService;
 
@@ -38,6 +41,9 @@ public class WhatsAppServiceImpl implements WhatsAppService {
 	private ResumeService resumeService;
 
 	@Autowired
+	private JDService jdService;
+
+	@Autowired
 	private ResumeRepository resumeRepository;
 
 	@Autowired
@@ -51,6 +57,9 @@ public class WhatsAppServiceImpl implements WhatsAppService {
 
 	@Value("${whatsapp.api.phone-number-id}")
 	private String whatsappPhoneNumberId;
+
+	@Autowired
+	private AzureChatPlaygroundService azureChatPlaygroundService;
 
 	@Autowired
 	private CommunicationRepository communicationRepository;
@@ -165,4 +174,55 @@ public class WhatsAppServiceImpl implements WhatsAppService {
 		}
 		return fileName;
 	}
+
+	@Override
+	public WhatsAppSendResponse replyToMessage(String waId, String message) {
+		var communication = communicationRepository.findByContentIdAndType(waId, CommunicationType.WHATSAPP);
+		if (communication == null) {
+			log.warn("Received message from unkown user", waId);
+			throw new RuntimeException("No previous communication found for WhatsApp ID: " + waId);
+		}
+
+		String jdSummary = jdService.generateSummary(communication.getJdId());
+		var content = new ObjectMapper().convertValue(communication.getContent(), WhatsAppContentDTO.class);
+		content.getUtterances().add(new Utterance("user", message));
+		if (content.getChatStatus() == status.CALL_CONFIRMED) {
+			log.info("Status is {}, ending conversation", content.getChatStatus());
+			return send(waId, "Thank you for your time. We will be in touch soon.");
+		}
+
+		ChatResponse response = azureChatPlaygroundService.getChatResponse(jdSummary, content.utterancesToText());
+		content.setChatStatus(response.status());
+		content.getUtterances().add(new Utterance("model", response.reply()));
+		communication.setContent(content);
+		WhatsAppSendResponse whatsAppResponse = send(waId, response.reply());
+		communicationRepository.save(communication);
+		return whatsAppResponse;
+
+	}
+
+	private WhatsAppSendResponse send(String waId, String message) {
+
+		ObjectNode body = new ObjectMapper().createObjectNode();
+		body.put("messaging_product", "whatsapp");
+		body.put("to", waId);
+		body.put("type", "text");
+		ObjectNode text = body.putObject("text");
+		text.put("body", message);
+		try {
+
+			var response = restClient.post().uri("/messages").body(body).retrieve()
+					.body(new ParameterizedTypeReference<WhatsAppSendResponse>() {
+					});
+
+			log.info("WhatsApp message sent successfully to {}: {}", waId, response);
+			return response;
+
+		} catch (Exception e) {
+			log.error("Failed to send WhatsApp message to {}: {}", waId, e.getMessage());
+			throw new RuntimeException("Failed to send WhatsApp message to " + waId, e);
+
+		}
+	}
+
 }

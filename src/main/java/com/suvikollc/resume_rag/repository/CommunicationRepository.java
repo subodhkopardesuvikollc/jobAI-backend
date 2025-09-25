@@ -14,4 +14,6 @@ public interface CommunicationRepository extends MongoRepository<Communication, 
 
 	Communication findByJdIdAndResumeIdAndType(ObjectId objectId, ObjectId objectId2, CommunicationType whatsapp);
 
+	Communication findByContentIdAndType(String waId, CommunicationType whatsapp);
+
 }
