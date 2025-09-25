@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -46,8 +47,8 @@ public class JdServiceImpl implements JDService {
 		}
 
 		Jd jd = jdRepository.findByFileName(jdBlobName);
-		
-		if(jd == null) {
+
+		if (jd == null) {
 			throw new RuntimeException("JD not found in the database for blob name: " + jdBlobName);
 		}
 		if (jd != null && jd.getKeywords() != null) {
@@ -77,6 +78,58 @@ public class JdServiceImpl implements JDService {
 			throw new RuntimeException("Failed to extract keywords from JD: " + e.getMessage());
 		}
 
+	}
+
+	public String generateSummary(String jdBlobName) {
+
+		var blobClient = fileService.getBlobClient(jdBlobName, jdContainerName);
+		if (!blobClient.exists()) {
+			throw new RuntimeException("Blob does not exist for blob name: " + jdBlobName);
+		}
+
+		Jd jd = jdRepository.findByFileName(jdBlobName);
+
+		if (jd == null) {
+			throw new RuntimeException("JD not found in the database for blob name: " + jdBlobName);
+		}
+		if (jd != null && jd.getSummary() != null && !jd.getSummary().isEmpty()) {
+			log.info("Summary already exists for JD: {}", jdBlobName);
+			return jd.getSummary();
+		}
+
+		try (InputStream inputStream = blobClient.openInputStream()) {
+			String jdContent = fileService.extractContent(inputStream);
+
+			String systemMessageText = "You are an expert recruitment analyst. Your task is to write a brief, natural language summary of the provided job description. The summary should be a single, easy-to-read paragraph that highlights the most critical information: the job title, required years of experience, key responsibilities, and mandatory skills. The tone should be professional yet engaging, as if you were briefly describing the role to a potential candidate. Do not use bullet points, lists, or any special formatting. Respond ONLY with the summary paragraph.";
+			String userMessageText = "Create a summary for the following job description: " + jdContent;
+
+			List<Message> messages = new ArrayList<>();
+			messages.add(new SystemMessage(systemMessageText));
+			messages.add(new UserMessage(userMessageText));
+
+			Prompt prompt = new Prompt(messages);
+
+			String summary = chatClient.prompt(prompt).call().content();
+
+			System.out.println("Generated Summary: " + summary);
+
+			jd.setSummary(summary);
+			jdRepository.save(jd);
+
+			return summary;
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new RuntimeException("Failed to generate summary for JD: " + e.getMessage());
+		}
+	}
+
+	@Override
+	public String generateSummary(ObjectId jdId) {
+		Jd jd = jdRepository.findById(jdId).orElse(null);
+		if (jd == null) {
+			throw new RuntimeException("JD not found in the database for ID: " + jdId);
+		}
+		return generateSummary(jd.getBlobName());
 	}
 
 }

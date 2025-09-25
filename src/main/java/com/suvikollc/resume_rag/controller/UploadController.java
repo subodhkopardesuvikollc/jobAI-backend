@@ -76,7 +76,7 @@ public class UploadController {
 		}
 
 	}
-	
+
 	@PostMapping("/uploadToVectorDB")
 	public ResponseEntity<?> uploadToVectorDB(@RequestParam String fileName) {
 		try {
@@ -87,19 +87,10 @@ public class UploadController {
 		}
 	}
 
-	@GetMapping("/extract-sections")
+	@GetMapping("/summarize")
 	public ResponseEntity<?> extractSections(@RequestParam String fileName) {
-		var blobClient = fileService.getBlobClient(fileName, "resumes");
 
-		try (var InputStream = blobClient.openInputStream()) {
-
-			String resumeContent = fileService.extractContent(InputStream);
-			Map<String, String> sections = impl.extractSections(resumeContent);
-
-			var experienceText = sections.remove("projects");
-
-			return ResponseEntity.ok(semanticChunkingService.chunk(experienceText, fileName, "experience"));
-		}
+		return ResponseEntity.ok(jdService.generateSummary(fileName));
 
 	}
 
