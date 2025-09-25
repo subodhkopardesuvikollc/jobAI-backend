@@ -26,4 +26,12 @@ public class WhatsAppContentDTO {
 		this.utterances.add(new Utterance(speaker, text));
 	}
 
+	public String utterancesToText() {
+		StringBuilder sb = new StringBuilder();
+		for (Utterance utterance : utterances) {
+			sb.append(utterance.getSpeaker()).append(": ").append(utterance.getText()).append("\n");
+		}
+		return sb.toString();
+	}
+
 }

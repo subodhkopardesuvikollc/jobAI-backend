@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -94,16 +93,22 @@ public class CommunicationController {
 
 		if (payload != null && payload.entry() != null) {
 			log.info("Received WhatsApp callback: {}", payload);
-			String waId = payload.entry().get(0).changes().get(0).value().contacts().get(0).waId();
-			String message = payload.entry().get(0).changes().get(0).value().messages().get(0).text().body();
-			if(waId != null) {
-				whatsAppService.replyToMessage(waId, message);
-			} 
-			
+			var contacts = payload.entry().get(0).changes().get(0).value().contacts();
+			String waId = (contacts != null && !contacts.isEmpty()) ? contacts.get(0).waId() : null;
+			var messages = payload.entry().get(0).changes().get(0).value().messages();
+			String message = (messages != null && !messages.isEmpty() && messages.get(0).text() != null)
+					? messages.get(0).text().body()
+					: null;
+			if (waId != null && message != null) {
+				return ResponseEntity.ok(whatsAppService.replyToMessage(waId, message));
+			}
+			return null;
+
 		} else {
+
 			log.warn("Received empty or invalid WhatsApp callback payload.");
+			return ResponseEntity.badRequest().body("Invalid payload");
 		}
-		return ResponseEntity.ok().build();
 	}
 
 	@GetMapping("/whatsapp/callback")
